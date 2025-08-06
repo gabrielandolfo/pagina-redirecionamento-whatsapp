@@ -1,30 +1,33 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1242065550945306');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aguarde...</title>
+    
+    <!-- Facebook Pixel -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1242065550945306'); // Substitua pelo seu Pixel ID
+    fbq('track', 'PageView');
+    </script>
+    <noscript>
+        <img height="1" width="1" style="display:none"
+        src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"/>
+    </noscript>
+    <!-- /Facebook Pixel -->
+
     <style>
         body {
-            background-color: #e0f2e7; /* Um verde bem claro */
-            color: #075e54; /* Verde escuro do WhatsApp */
+            background-color: #e0f2e7;
+            color: #075e54;
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
@@ -60,7 +63,7 @@ src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"
             font-size: 1.3em;
             font-weight: normal;
             margin: 0;
-            max-width: 90%; /* para evitar quebra em telas pequenas */
+            max-width: 90%;
         }
 
         @media (max-width: 600px) {
@@ -83,16 +86,32 @@ src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"
 
     <script>
         window.onload = function() {
+            // **[PASSO 1]** Substitua esta URL pela do seu Webhook do n8n
             const webhookUrl = 'https://webhook.servidorrrdigital.site/webhook/b2f46e7a-6a19-4e00-bb07-683d23a10646';
+            // **[PASSO 2]** Substitua pelo seu número de WhatsApp
             const whatsappNumber = '5535991712235';
+            // **[PASSO 3]** Mensagem pré-configurada
             const preconfiguredMessage = "Olá, quero receber os materiais!";
 
+            // Captura parâmetros da URL
             const urlParams = new URLSearchParams(window.location.search);
             const data = {};
             for (const [key, value] of urlParams.entries()) {
                 data[key] = value;
             }
 
+            // Captura cookies do Facebook (_fbc e _fbp)
+            const getCookie = (name) => {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            };
+            const fbc = getCookie('_fbc');
+            const fbp = getCookie('_fbp');
+            data.fbc = fbc;
+            data.fbp = fbp;
+
+            // Envia dados para o webhook
             fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -102,6 +121,7 @@ src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"
             .then(data => console.log('Sucesso:', data))
             .catch(error => console.error('Erro:', error));
 
+            // Redireciona para o WhatsApp
             const encodedMessage = encodeURIComponent(preconfiguredMessage);
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
 
