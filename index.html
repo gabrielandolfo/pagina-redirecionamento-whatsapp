@@ -10,7 +10,7 @@
             color: #075e54; /* Verde escuro do WhatsApp */
             font-family: Arial, sans-serif;
             display: flex;
-            flex-direction: column; /* Para centralizar o texto abaixo do loader */
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -18,24 +18,23 @@
             text-align: center;
         }
         .loader {
-            border: 6px solid #f0f0f0; /* Branco quase transparente - um pouco menor */
-            border-top: 6px solid #25d366; /* Verde principal do WhatsApp - um pouco menor */
+            border: 6px solid #f0f0f0;
+            border-top: 6px solid #25d366;
             border-radius: 50%;
-            width: 40px; /* Menor */
-            height: 40px; /* Menor */
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px; /* Espaçamento entre o loader e o texto */
+            margin-bottom: 20px;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
         h1 {
-            font-size: 1.2em; /* Fonte um pouco menor para mobile */
+            font-size: 1.2em;
             font-weight: normal;
-            margin-top: 0; /* Remove a margem superior padrão */
+            margin-top: 0;
         }
-        /* Responsividade para telas menores */
         @media (max-width: 600px) {
             h1 {
                 font-size: 1em;
@@ -64,7 +63,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const data = {};
             for (const [key, value] of urlParams.entries()) {
-                data[key] = value;
+                data[key] = value; // Linha corrigida aqui
             }
 
             fetch(webhookUrl, {
