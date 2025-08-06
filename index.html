@@ -10,6 +10,7 @@
             color: #075e54; /* Verde escuro do WhatsApp */
             font-family: Arial, sans-serif;
             display: flex;
+            flex-direction: column; /* Para centralizar o texto abaixo do loader */
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -17,22 +18,28 @@
             text-align: center;
         }
         .loader {
-            border: 8px solid #f0f0f0; /* Branco quase transparente */
-            border-top: 8px solid #25d366; /* Verde principal do WhatsApp */
+            border: 6px solid #f0f0f0; /* Branco quase transparente - um pouco menor */
+            border-top: 6px solid #25d366; /* Verde principal do WhatsApp - um pouco menor */
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
+            width: 40px; /* Menor */
+            height: 40px; /* Menor */
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            margin-bottom: 20px; /* Espaçamento entre o loader e o texto */
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
         h1 {
-            font-size: 1.5em;
+            font-size: 1.2em; /* Fonte um pouco menor para mobile */
             font-weight: normal;
-            margin-top: 20px;
+            margin-top: 0; /* Remove a margem superior padrão */
+        }
+        /* Responsividade para telas menores */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1em;
+            }
         }
     </style>
 </head>
@@ -51,7 +58,7 @@
             const whatsappNumber = '5535991712235';
 
             // **[PASSO 3]** Edite a mensagem que você quer pré-configurar
-            const preconfiguredMessage = "Olá, quero receber as atividades!";
+            const preconfiguredMessage = "Olá, quero receber os materiais!";
 
             // --- CÓDIGO TÉCNICO ABAIXO (NÃO PRECISA SER ALTERADO) ---
             const urlParams = new URLSearchParams(window.location.search);
