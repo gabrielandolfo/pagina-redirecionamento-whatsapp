@@ -10,32 +10,48 @@
             color: #075e54; /* Verde escuro do WhatsApp */
             font-family: Arial, sans-serif;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
             text-align: center;
         }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
         .loader {
             border: 6px solid #f0f0f0;
             border-top: 6px solid #25d366;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 60px;
+            height: 60px;
             animation: spin 1s linear infinite;
             margin-bottom: 20px;
         }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
         h1 {
-            font-size: 1.2em;
+            font-size: 1.3em;
             font-weight: normal;
-            margin-top: 0;
+            margin: 0;
+            max-width: 90%; /* para evitar quebra em telas pequenas */
         }
+
         @media (max-width: 600px) {
+            .loader {
+                width: 45px;
+                height: 45px;
+                border-width: 5px;
+            }
             h1 {
                 font-size: 1em;
             }
@@ -43,43 +59,31 @@
     </style>
 </head>
 <body>
-    <div>
+    <div class="container">
         <div class="loader"></div>
         <h1>Estamos te direcionando para o WhatsApp...</h1>
     </div>
 
     <script>
         window.onload = function() {
-            // **[PASSO 1]** Substitua esta URL pela do seu Webhook do n8n
             const webhookUrl = 'https://webhook.servidorrrdigital.site/webhook/b2f46e7a-6a19-4e00-bb07-683d23a10646';
-
-            // **[PASSO 2]** Substitua pelo seu número de WhatsApp, incluindo o código do país (ex: '5535999999999')
             const whatsappNumber = '5535991712235';
-
-            // **[PASSO 3]** Edite a mensagem que você quer pré-configurar
             const preconfiguredMessage = "Olá, quero receber os materiais!";
 
-            // --- CÓDIGO TÉCNICO ABAIXO (NÃO PRECISA SER ALTERADO) ---
             const urlParams = new URLSearchParams(window.location.search);
             const data = {};
             for (const [key, value] of urlParams.entries()) {
-                data[key] = value; // Linha corrigida aqui
+                data[key] = value;
             }
 
             fetch(webhookUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
             .then(response => response.json())
-            .then(data => {
-                console.log('Sucesso:', data);
-            })
-            .catch((error) => {
-                console.error('Erro:', error);
-            });
+            .then(data => console.log('Sucesso:', data))
+            .catch(error => console.error('Erro:', error));
 
             const encodedMessage = encodeURIComponent(preconfiguredMessage);
             const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
