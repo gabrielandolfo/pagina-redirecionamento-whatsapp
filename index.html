@@ -59,7 +59,7 @@
             const fbc = fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : 'na';
 
             // Monta a mensagem de referência completa para o n8n
-            const refMessage = `Ref:{${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}`;
+            const refMessage = `Olá, quero receber os materiais!`;
             
             // Cria a URL final do WhatsApp
             const whatsappUrl = `https://wa.me/${5535991712235}?text=${encodeURIComponent(refMessage)}`;
@@ -67,7 +67,7 @@
             // Redireciona o navegador do usuário para o WhatsApp
             window.location.href = whatsappUrl;
 
-        }, 800); // Atraso de 800 milissegundos. 
+        }, 2000); // Atraso de 2000 milissegundos. 
 
     </script>
 </body>
