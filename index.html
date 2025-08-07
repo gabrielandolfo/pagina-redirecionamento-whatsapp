@@ -3,115 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aguarde</title>
-    <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f7fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            text-align: center;
-        }
-
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
-        }
-
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 1.2em;
-        }
-
-        .loader {
-            border: 16px solid #f3f3f3;
-            border-top: 16px solid #25d366;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            animation: spin 2s linear infinite;
-            margin: 30px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        p {
-            font-size: 0.9em;
-            color: #777;
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                width: 250px;
-            }
-
-            .loader {
-                width: 50px;
-                height: 50px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Aguarde enquanto estamos processando...</h2>
-        <div class="loader" id="loader"></div>
-        <p id="message">Estamos te redirecionando para o WhatsApp...</p>
-    </div>
+    <title>Redirecionando...</title>
 
     <script>
-        function sendToWebhook(data) {
-            fetch('https://webhook.servidorrrdigital.site/webhook/9c58519d-ba62-4719-a055-416cf054ccc5', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(() => {
-                var url = https://wa.me/5535991712235?text=Olá,%20quero%20receber%20os%20materiais!; 
-                console.log("Redirecionando para o WhatsApp: ", url); 
-                window.location.href = url;
-            })
-            .catch(error => {
-                console.error('Erro ao enviar para o Webhook:', error);
-            });
-        }
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    
+    // SUBSTITUA 'SEU_PIXEL_ID' PELO ID DO SEU PIXEL
+    fbq('init', '1242065550945306'); 
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"
+    /></noscript>
+    </head>
+<body>
+    <p style="text-align: center; font-family: sans-serif; margin-top: 50px;">Redirecionando para o WhatsApp...</p>
 
-        function getFacebookData() {
-            return {
-                fbp: getCookie('_fbp'),
-                fbc: getCookie('_fbc'),
-                referrer: document.referrer,
-                userAgent: navigator.userAgent
-            };
-        }
+    <script>
+        // Adiciona um pequeno atraso para dar tempo do Pixel do Meta carregar e criar o cookie _fbp
+        setTimeout(function() {
+            // =======================================================
+            //      ÁREA DE CONFIGURAÇÃO - PERSONALIZE AQUI
+            // =======================================================
+            // 1. Coloque o seu número de WhatsApp com o código do país
+            const seuNumeroWhatsApp = '5535991712235'; // <-- SUBSTITUA AQUI
 
-        function getCookie(name) {
-            var match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
-            return match ? match[2] : null;
-        }
+            // 2. Defina os parâmetros da sua campanha
+            const utm_source = 'facebook';
+            const utm_campaign = 'minha-campanha';
+            const utm_content = 'meu-anuncio';
+            // =======================================================
 
-        function captureAndRedirect() {
-            var data = getFacebookData();
-            sendToWebhook(data);
-        }
+            // Função para pegar um cookie pelo nome
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
 
-        // Esta é a única linha que foi alterada.
-        // Atrasamos a chamada da função captureAndRedirect por 3 segundos.
-        window.onload = function() {
-            setTimeout(captureAndRedirect, 3000);
-        };
+            // Função para pegar um parâmetro da URL (fbclid)
+            function getUrlParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+
+            const fbp = getCookie('_fbp') || 'na'; // 'na' = não aplicável
+            const fbclid = getUrlParam('fbclid');
+            const fbc = fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : 'na';
+
+            // Monta a mensagem de referência completa para o n8n
+            const refMessage = `Ref:{${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}`;
+            
+            // Cria a URL final do WhatsApp
+            const whatsappUrl = `https://wa.me/${5535991712235}?text=${encodeURIComponent(refMessage)}`;
+
+            // Redireciona o navegador do usuário para o WhatsApp
+            window.location.href = whatsappUrl;
+
+        }, 800); // Atraso de 800 milissegundos. 
+
     </script>
 </body>
 </html>
