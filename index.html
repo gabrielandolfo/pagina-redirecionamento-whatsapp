@@ -83,7 +83,7 @@
                 var mensagem = "Olá, quero receber os materiais!";
                 var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); 
                 console.log("Redirecionando para o WhatsApp: ", url); 
-                window.location.href = url; // Redirecionamento imediato
+                window.location.href = url;
             })
             .catch(error => {
                 console.error('Erro ao enviar para o Webhook:', error);
@@ -109,8 +109,10 @@
             sendToWebhook(data);
         }
 
+        // Esta é a única linha que foi alterada.
+        // Atrasamos a chamada da função captureAndRedirect por 3 segundos.
         window.onload = function() {
-            captureAndRedirect();
+            setTimeout(captureAndRedirect, 3000);
         };
     </script>
 </body>
