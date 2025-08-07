@@ -6,31 +6,55 @@
     <title>Aguarde</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             text-align: center;
             padding: 50px;
-            background-color: #f4f4f4;
+            background-color: #e5e5e5; /* Cor de fundo similar ao WhatsApp */
+            margin: 0;
         }
+
         h2 {
-            color: #333;
+            color: #4a4a4a;
+            font-size: 1.6em;
+            margin-top: 20px;
         }
+
+        /* Estilo do loader */
         .loader {
-            border: 16px solid #f3f3f3;
-            border-top: 16px solid #3498db;
+            border: 16px solid #f3f3f3; /* Cor do fundo */
+            border-top: 16px solid #25d366; /* Cor verde similar ao WhatsApp */
             border-radius: 50%;
             width: 60px;
             height: 60px;
             animation: spin 2s linear infinite;
-            margin: 20px auto;
+            margin: 30px auto;
         }
+
+        /* Animação de rotação */
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Responsividade para mobile */
+        @media (max-width: 600px) {
+            body {
+                padding: 20px;
+            }
+
+            h2 {
+                font-size: 1.2em;
+            }
+
+            .loader {
+                width: 50px;
+                height: 50px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h2>Carregando...</h2>
+    <h2>Aguarde enquanto estamos processando...</h2>
     <div class="loader" id="loader"></div>
     <p id="message" style="display: none;">Estamos te redirecionando para o WhatsApp...</p>
 
@@ -61,7 +85,7 @@
                     var mensagem = "Olá, quero receber os materiais!";
                     var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem);
                     window.location.href = url;
-                }, 3000);
+                }, 3000); // 3 segundos
             })
             .catch(error => console.error('Erro ao enviar para o Webhook:', error));
         }
