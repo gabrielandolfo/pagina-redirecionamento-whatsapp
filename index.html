@@ -27,10 +27,8 @@
     <p style="text-align: center; font-family: sans-serif; margin-top: 50px;">Redirecionando para o WhatsApp...</p>
 
     <script>
-        // Adiciona um pequeno atraso para dar tempo do Pixel do Meta carregar e criar o cookie _fbp
+        // Adiciona um pequeno atraso para dar tempo do Pixel do Meta carregar
         setTimeout(function() {
-            // --- NÃO ALTERAR DAQUI PARA BAIXO ---
-
             // Função para pegar um parâmetro da URL
             function getUrlParam(name) {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -47,10 +45,11 @@
             // =======================================================
             //      ÁREA DE CONFIGURAÇÃO - PERSONALIZE APENAS AQUI
             // =======================================================
-            // 1. Escreva a mensagem que o cliente verá. Use %0A para pular linha.
+            // *** AQUI ESTÁ A MUDANÇA PARA SEPARAR A MENSAGEM ***
+            // Use %0A para pular linhas. Dois %0A pulam uma linha em branco.
             const mensagemAmigavel = "Olá! Quero receber os materiais!%0A%0A";
 
-            // 2. Coloque o seu número de WhatsApp com o código do país
+            // Coloque o seu número de WhatsApp com o código do país
             const seuNumeroWhatsApp = '5535991712235'; // <-- VERIFIQUE SE ESTÁ CORRETO
             // =======================================================
 
@@ -67,7 +66,7 @@
             // Captura o timestamp exato do evento
             const event_timestamp = Date.now();
 
-            // Monta a mensagem de referência completa (agora com 6 partes)
+            // Monta a mensagem de referência completa
             const refMessage = `Ref:{${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}-{${event_timestamp}}`;
             
             // Junta a mensagem amigável com a mensagem de rastreamento
