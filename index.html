@@ -9,7 +9,7 @@
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f4f7fa; /* Cor de fundo clara */
+            background-color: #f4f7fa;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -33,7 +33,7 @@
 
         .loader {
             border: 16px solid #f3f3f3;
-            border-top: 16px solid #25d366; /* Cor do WhatsApp */
+            border-top: 16px solid #25d366;
             border-radius: 50%;
             width: 60px;
             height: 60px;
@@ -41,7 +41,6 @@
             margin: 30px auto;
         }
 
-        /* Animação de rotação */
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -66,7 +65,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Aguarde</h2>
+        <h2>Aguarde enquanto estamos processando...</h2>
         <div class="loader" id="loader"></div>
         <p id="message">Estamos te redirecionando para o WhatsApp...</p>
     </div>
@@ -80,13 +79,15 @@
             })
             .then(response => response.json())
             .then(() => {
-                setTimeout(function() {
-                    var mensagem = "Olá, quero receber os materiais!";
-                    var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); 
-                    window.location.href = url;
-                }, 3000); 
+                console.log("Dados enviados para o Webhook com sucesso!");
+                var mensagem = "Olá, quero receber os materiais!";
+                var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); 
+                console.log("Redirecionando para o WhatsApp: ", url); 
+                window.location.href = url; // Redirecionamento imediato
             })
-            .catch(error => console.error('Erro ao enviar para o Webhook:', error));
+            .catch(error => {
+                console.error('Erro ao enviar para o Webhook:', error);
+            });
         }
 
         function getFacebookData() {
