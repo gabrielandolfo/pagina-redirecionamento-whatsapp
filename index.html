@@ -79,9 +79,7 @@
             })
             .then(response => response.json())
             .then(() => {
-                console.log("Dados enviados para o Webhook com sucesso!");
-                var mensagem = "Olá, quero receber os materiais!";
-                var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); 
+                var url = https://wa.me/5535991712235?text=Olá,%20quero%20receber%20os%20materiais!; 
                 console.log("Redirecionando para o WhatsApp: ", url); 
                 window.location.href = url;
             })
