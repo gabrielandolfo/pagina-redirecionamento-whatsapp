@@ -7,22 +7,33 @@
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            text-align: center;
-            padding: 50px;
-            background-color: #e5e5e5; /* Cor de fundo similar ao WhatsApp */
             margin: 0;
+            padding: 0;
+            background-color: #f4f7fa; /* Cor de fundo clara */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
         }
 
         h2 {
-            color: #4a4a4a;
-            font-size: 1.6em;
-            margin-top: 20px;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.2em;
         }
 
-        /* Estilo do loader */
         .loader {
             border: 16px solid #f3f3f3; /* Cor do fundo */
-            border-top: 16px solid #25d366; /* Cor verde similar ao WhatsApp */
+            border-top: 16px solid #25d366; /* Cor do WhatsApp */
             border-radius: 50%;
             width: 60px;
             height: 60px;
@@ -36,14 +47,16 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Texto pequeno informativo */
+        p {
+            font-size: 0.9em;
+            color: #777;
+        }
+
         /* Responsividade para mobile */
         @media (max-width: 600px) {
-            body {
-                padding: 20px;
-            }
-
-            h2 {
-                font-size: 1.2em;
+            .container {
+                width: 250px;
             }
 
             .loader {
@@ -54,9 +67,11 @@
     </style>
 </head>
 <body>
-    <h2>Aguarde enquanto estamos processando...</h2>
-    <div class="loader" id="loader"></div>
-    <p id="message" style="display: none;">Estamos te redirecionando para o WhatsApp...</p>
+    <div class="container">
+        <h2>Aguarde enquanto estamos processando...</h2>
+        <div class="loader" id="loader"></div>
+        <p id="message">Estamos te redirecionando para o WhatsApp...</p>
+    </div>
 
     <script>
         function getFacebookData() {
@@ -83,21 +98,9 @@
             .then(() => {
                 setTimeout(function() {
                     var mensagem = "Olá, quero receber os materiais!";
-                    var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem);
+                    var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); // Redirecionamento para o WhatsApp
                     window.location.href = url;
-                }, 3000); // 3 segundos
+                }, 3000); // 3 segundos para redirecionar
             })
             .catch(error => console.error('Erro ao enviar para o Webhook:', error));
         }
-
-        function captureAndRedirect() {
-            var data = getFacebookData();
-            sendToWebhook(data);
-        }
-
-        window.onload = function() {
-            captureAndRedirect();
-        };
-    </script>
-</body>
-</html>
