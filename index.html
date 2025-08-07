@@ -98,9 +98,21 @@
             .then(() => {
                 setTimeout(function() {
                     var mensagem = "Olá, quero receber os materiais!";
-                    var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); // Redirecionamento para o WhatsApp
+                    var url = "https://wa.me/5535991712235?text=" + encodeURIComponent(mensagem); // A URL correta para redirecionar para o WhatsApp
                     window.location.href = url;
                 }, 3000); // 3 segundos para redirecionar
             })
             .catch(error => console.error('Erro ao enviar para o Webhook:', error));
         }
+
+        function captureAndRedirect() {
+            var data = getFacebookData();
+            sendToWebhook(data);
+        }
+
+        window.onload = function() {
+            captureAndRedirect();
+        };
+    </script>
+</body>
+</html>
