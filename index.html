@@ -29,46 +29,49 @@
     <script>
         // Adiciona um pequeno atraso para dar tempo do Pixel do Meta carregar e criar o cookie _fbp
         setTimeout(function() {
-            // =======================================================
-            //      ÁREA DE CONFIGURAÇÃO - PERSONALIZE AQUI
-            // =======================================================
-            // 1. Coloque o seu número de WhatsApp com o código do país
-            const seuNumeroWhatsApp = '5535991712235'; // <-- SUBSTITUA AQUI
+            // --- NÃO ALTERAR DAQUI PARA BAIXO ---
 
-            // 2. Defina os parâmetros da sua campanha
-            const utm_source = 'facebook';
-            const utm_campaign = 'minha-campanha';
-            const utm_content = 'meu-anuncio';
-            // =======================================================
-
-            // Função para pegar um cookie pelo nome
-            function getCookie(name) {
-                const value = `; ${document.cookie}`;
-                const parts = value.split(`; ${name}=`);
-                if (parts.length === 2) return parts.pop().split(';').shift();
-            }
-
-            // Função para pegar um parâmetro da URL (fbclid)
+            // Função para pegar um parâmetro da URL
             function getUrlParam(name) {
                 const urlParams = new URLSearchParams(window.location.search);
                 return urlParams.get(name);
             }
 
-            const fbp = getCookie('_fbp') || 'na'; // 'na' = não aplicável
+            // =======================================================
+            //      ÁREA DE CONFIGURAÇÃO - PERSONALIZE APENAS AQUI
+            // =======================================================
+            // 1. Escreva a mensagem que o cliente verá. 
+            const mensagemAmigavel = "Olá, quero receber os materiais"; // <-- PODE ALTERAR
+
+            // 2. Coloque o seu número de WhatsApp com o código do país
+            const seuNumeroWhatsApp = '5535991712235'; // <-- JÁ DEVE ESTAR CORRETO
+            // =======================================================
+
+
+            // Captura os parâmetros UTM DINAMICAMENTE da URL
+            const utm_source = getUrlParam('utm_source') || 'organic';
+            const utm_campaign = getUrlParam('utm_campaign') || 'direct';
+            const utm_content = getUrlParam('utm_content') || 'n/a';
+
+            const fbp = getCookie('_fbp') || 'na';
             const fbclid = getUrlParam('fbclid');
             const fbc = fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : 'na';
 
-            // Monta a mensagem de referência completa para o n8n
-            const refMessage = `Olá, quero receber os materiais!`;
+            // Monta a parte da mensagem que é só para o rastreamento
+            const refMessage = `Ref:{${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}`;
             
+            // Junta a mensagem amigável com a mensagem de rastreamento
+            const mensagemCompleta = mensagemAmigavel + refMessage;
+
             // Cria a URL final do WhatsApp
-            const whatsappUrl = `https://wa.me/${5535991712235}?text=${encodeURIComponent(refMessage)}`;
+            const whatsappUrl = `https://wa.me/${5535991712235}?text=${encodeURIComponent(mensagemCompleta)}`;
 
             // Redireciona o navegador do usuário para o WhatsApp
             window.location.href = whatsappUrl;
 
-        }, 2000); // Atraso de 2000 milissegundos. 
+        }, 1500);
 
+    </script>
     </script>
 </body>
 </html>
