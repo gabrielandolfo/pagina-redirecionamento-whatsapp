@@ -37,28 +37,38 @@
                 return urlParams.get(name);
             }
 
+            // Função para pegar um cookie pelo nome
+            function getCookie(name) {
+                const value = `; ${document.cookie}`;
+                const parts = value.split(`; ${name}=`);
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
+
             // =======================================================
             //      ÁREA DE CONFIGURAÇÃO - PERSONALIZE APENAS AQUI
             // =======================================================
-            // 1. Escreva a mensagem que o cliente verá. 
-            const mensagemAmigavel = "Olá, quero receber os materiais"; // <-- PODE ALTERAR
+            // 1. Escreva a mensagem que o cliente verá. Use %0A para pular linha.
+            const mensagemAmigavel = "Olá! Quero receber os materiais!";
 
             // 2. Coloque o seu número de WhatsApp com o código do país
-            const seuNumeroWhatsApp = '5535991712235'; // <-- JÁ DEVE ESTAR CORRETO
+            const seuNumeroWhatsApp = '5535991712235'; // <-- VERIFIQUE SE ESTÁ CORRETO
             // =======================================================
-
 
             // Captura os parâmetros UTM DINAMICAMENTE da URL
             const utm_source = getUrlParam('utm_source') || 'organic';
             const utm_campaign = getUrlParam('utm_campaign') || 'direct';
             const utm_content = getUrlParam('utm_content') || 'n/a';
 
+            // Captura os identificadores do Meta
             const fbp = getCookie('_fbp') || 'na';
             const fbclid = getUrlParam('fbclid');
             const fbc = fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : 'na';
 
-            // Monta a parte da mensagem que é só para o rastreamento
-            const refMessage = `Ref:{${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}`;
+            // Captura o timestamp exato do evento
+            const event_timestamp = Date.now();
+
+            // Monta a mensagem de referência completa (agora com 6 partes)
+            const refMessage = `Ref:{${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}-{${event_timestamp}}`;
             
             // Junta a mensagem amigável com a mensagem de rastreamento
             const mensagemCompleta = mensagemAmigavel + refMessage;
@@ -70,8 +80,6 @@
             window.location.href = whatsappUrl;
 
         }, 1500);
-
-    </script>
     </script>
 </body>
 </html>
