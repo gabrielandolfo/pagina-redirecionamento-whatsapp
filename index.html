@@ -29,6 +29,19 @@
     <script>
         // Adiciona um pequeno atraso para dar tempo do Pixel do Meta carregar
         setTimeout(function() {
+            // =======================================================
+            //      ÁREA DE CONFIGURAÇÃO - EDITE APENAS AQUI
+            // =======================================================
+            // Use %0A para pular linhas e deixar a mensagem mais limpa.
+            const mensagemAmigavel = "Olá! Quero receber os materiais!%0A%0A";
+
+            // Coloque o seu número de WhatsApp com o código do país
+            const seuNumeroWhatsApp = '5535991712235'; // SEU NÚMERO
+            // =======================================================
+
+
+            // --- NÃO ALTERAR DAQUI PARA BAIXO ---
+            
             // Função para pegar um parâmetro da URL
             function getUrlParam(name) {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -42,18 +55,6 @@
                 if (parts.length === 2) return parts.pop().split(';').shift();
             }
 
-            // =======================================================
-            //      ÁREA DE CONFIGURAÇÃO - PERSONALIZE APENAS AQUI
-            // =======================================================
-            // Use %0A para pular linhas e deixar a mensagem mais limpa.
-            const mensagemAmigavel = "Olá! Quero receber os materiais!%0A%0A";
-
-            // Coloque o seu número de WhatsApp com o código do país
-            const seuNumeroWhatsApp = '5535991712235'; // <-- VERIFIQUE SE ESTÁ CORRETO
-            // =======================================================
-
-            // --- NÃO ALTERAR DAQUI PARA BAIXO ---
-            
             const utm_source = getUrlParam('utm_source') || 'organic';
             const utm_campaign = getUrlParam('utm_campaign') || 'direct';
             const utm_content = getUrlParam('utm_content') || 'n/a';
@@ -63,11 +64,11 @@
             const fbc = fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : 'na';
             const event_timestamp = Date.now();
 
-            // Trocamos "Ref:" por uma frase mais amigável.
+            // Usando a frase amigável para o código de rastreio
             const refMessage = `ID Atendimento: {${utm_source}}-{${utm_campaign}}-{${utm_content}}-{${fbp}}-{${fbc}}-{${event_timestamp}}`;
             
             const mensagemCompleta = mensagemAmigavel + refMessage;
-            const whatsappUrl = `https://wa.me/${5535991712235}?text=${encodeURIComponent(mensagemCompleta)}`;
+            const whatsappUrl = `https://wa.me/${seuNumeroWhatsApp}?text=${encodeURIComponent(mensagemCompleta)}`;
 
             window.location.href = whatsappUrl;
 
