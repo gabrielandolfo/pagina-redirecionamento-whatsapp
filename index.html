@@ -23,14 +23,116 @@
          src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"/>
   </noscript>
 
+  <!-- ======= DESIGN (apenas CSS) ======= -->
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
-         text-align:center; margin-top:64px}
+    :root{
+      --bg: #e9f8ef;
+      --card: #ffffff;
+      --text: #0f3c2f;
+      --muted: #2a6b57;
+      --dot: #1ec971;
+      --ring: #1ec971;
+      --shadow: 0 20px 60px rgba(22, 101, 52, 0.12);
+      --radius: 24px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 600px at 50% -200px, rgba(25,135,84,.08), transparent 60%),
+        linear-gradient(180deg, var(--bg), #e6f6ef 45%, #eaf7f1);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:40px 20px;
+    }
+
+    .card{
+      width:min(720px, 92vw);
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:44px 36px 40px;
+      position:relative;
+    }
+
+    .status{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-weight:700;
+      font-size:22px;
+      color:var(--muted);
+      justify-content:center;
+    }
+
+    .dot{
+      width:12px;height:12px;border-radius:50%;
+      background:var(--dot);
+      box-shadow:0 0 0 6px rgba(30,201,113,.12);
+    }
+
+    .spinner-wrap{
+      display:flex;
+      justify-content:center;
+      margin:28px 0 14px;
+    }
+    .spinner{
+      width:64px;height:64px;border-radius:50%;
+      border:6px solid rgba(30,201,113,.18);
+      border-top-color:var(--ring);
+      animation:spin 1s linear infinite;
+      filter:drop-shadow(0 4px 20px rgba(30,201,113,.35));
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .title{
+      text-align:center;
+      font-size: clamp(22px, 3.4vw, 34px);
+      line-height:1.18;
+      font-weight:800;
+      letter-spacing:.2px;
+      margin:6px 0 0;
+      color:#0e3b2f;
+    }
+
+    /* borda de brilho suave do cartão */
+    .card:before{
+      content:"";
+      position:absolute; inset:-2px;
+      border-radius:calc(var(--radius) + 2px);
+      background: radial-gradient(60% 60% at 50% 0%, rgba(30,201,113,.18), transparent 70%);
+      z-index:-1;
+      filter:blur(10px);
+    }
+
+    /* acessibilidade básica */
+    @media (prefers-reduced-motion: reduce){
+      .spinner{animation:none}
+    }
   </style>
 </head>
 <body>
-  <p>Redirecionando para o WhatsApp...</p>
 
+  <!-- ======= UI (somente visual; lógica intocada) ======= -->
+  <main class="card" aria-busy="true" aria-live="polite">
+    <div class="status">
+      <span class="dot" aria-hidden="true"></span>
+      <span>Abrindo WhatsApp...</span>
+    </div>
+
+    <div class="spinner-wrap">
+      <div class="spinner" role="progressbar" aria-label="Carregando"></div>
+    </div>
+
+    <h1 class="title">Redirecionando para o WhatsApp</h1>
+  </main>
+
+  <!-- ======= LÓGICA ORIGINAL (intocada) ======= -->
   <script>
     // ============== CONFIG ====================
     const WHATSAPP_NUMBER = '5535991712235'; // seu número destino
