@@ -1,100 +1,271 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Redirecionando…</title>
-  <style>body{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;display:grid;place-items:center;height:100vh;text-align:center}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Redirecionando...</title>
+
+  <!-- Pixel Meta base -->
   <script>
-    // === CONFIG ===
-    const WHATSAPP_NUMBER = '5535991712235';
-    const BASE_MESSAGE    = 'Olá! Quero receber os materiais!';
-    const PREHOOK_URL     = 'https://webhook.servidorrrdigital.site/webhook/redirect';
+  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){
+  n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+  n.queue=[];t=b.createElement(e);t.async=!0;
+  t.src=v;s=b.getElementsByTagName(e)[0];
+  s.parentNode.insertBefore(t,s)}(window, document,'script',
+  'https://connect.facebook.net/en_US/fbevents.js');
 
-    // === UTM helpers ===
-    const qs = new URLSearchParams(location.search);
-    const get = (k,d='') => (qs.get(k) || d);
-    const slug = s => String(s||'na').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+  fbq('init', '1242065550945306'); /* seu Pixel */
+  fbq('track', 'PageView');
+  </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id=1242065550945306&ev=PageView&noscript=1"/>
+  </noscript>
 
-    // === Event id simple ===
-    function uuid(){
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;
+         text-align:center; margin-top:64px}
+  </style>
+</head>
+<body>
+  <p>Redirecionando para o WhatsApp...</p>
+
+  <script>
+    // ============== CONFIG ====================
+    const WHATSAPP_NUMBER = '5535991712235'; // seu número destino
+    const BASE_MESSAGE    = 'Olá! Quero receber os materiais!'; // mensagem visível
+    // const PREHOOK_URL  = 'https://n8n.granapdf.com/webhook/redirect'; // antigo
+    const PREHOOK_URL     = 'https://webhook.servidorrrdigital.site/webhook/redirect'; // novo
+    const INCLUDE_HIDDEN_IN_WA = true; // manter token invisível fora do WhatsApp
+    const REDIRECT_SOFT_DELAY  = 1500;  // ms
+    const REDIRECT_HARD_DELAY  = 3000; // ms
+
+    // ============== HELPERS ===================
+    const qp = (n)=> new URLSearchParams(location.search).get(n);
+    function getCookie(k){
+      const v = `; ${document.cookie}`.split(`; ${k}=`); return v.length === 2 ? v.pop().split(';').shift() : null;
+    }
+    function uuidv4(){
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
         const r = crypto.getRandomValues(new Uint8Array(1))[0] & 15;
         const v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
       });
     }
+    function slug(s){ return String(s||'na').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''); }
 
-    // === Zero width encoder kept (token invisível no texto) ===
-    function invis(hex){
-      const MAP = {'0':'\u200B','1':'\u200C','2':'\u200D','3':'\u2060','4':'\u061C','5':'\u180D','6':'\u034F','7':'\u00AD','8':'\u17B4','9':'\u115F','a':'\u2061','b':'\u2062','c':'\u2063','d':'\u2064','e':'\u206A','f':'\u206F'};
-      return hex.toLowerCase().replace(/[^0-9a-f]/g,'').slice(0,12).split('').map(ch=>MAP[ch]||'').join('');
+    // Zero-width (mantido para compatibilidade; não é enviado ao WhatsApp)
+    function encodeHexAsInvis(hex) {
+      const MAP = {
+        '0': '\u200B', '1': '\u200C', '2': '\u200D', '3': '\u2060',
+        '4': '\u061C', '5': '\u180D', '6': '\u034F', '7': '\u00AD',
+        '8': '\u17B4', '9': '\u115F', 'a': '\u2061', 'b': '\u2062',
+        'c': '\u2063', 'd': '\u2064', 'e': '\u206A', 'f': '\u206F'
+      };
+      return hex.toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 12).split('').map(char => MAP[char] || '').join('');
     }
 
-    // === Fire webhook (GET pixel + sendBeacon POST) ===
-    function fire(payload){
+    // Browser/OS/Device
+    function getBrowserInfo() {
+      const ua = navigator.userAgent;
+      if (ua.includes('Chrome')) return 'Chrome';
+      if (ua.includes('Firefox')) return 'Firefox';
+      if (ua.includes('Safari')) return 'Safari';
+      if (ua.includes('Edge')) return 'Edge';
+      if (ua.includes('Opera')) return 'Opera';
+      return 'Unknown';
+    }
+    function getBrowserVersion() {
+      const ua = navigator.userAgent;
+      const browser = getBrowserInfo();
+      if (browser === 'Chrome')  { const m = ua.match(/Chrome\/(\d+)/); return m?m[1]:'Unknown'; }
+      if (browser === 'Firefox') { const m = ua.match(/Firefox\/(\d+)/); return m?m[1]:'Unknown'; }
+      if (browser === 'Safari')  { const m = ua.match(/Version\/(\d+)/); return m?m[1]:'Unknown'; }
+      if (browser === 'Edge')    { const m = ua.match(/Edg\/(\d+)/); return m?m[1]:'Unknown'; }
+      return 'Unknown';
+    }
+    function getOSInfo() {
+      const ua = navigator.userAgent;
+      if (ua.includes('Windows')) return 'Windows';
+      if (ua.includes('Mac')) return 'macOS';
+      if (ua.includes('Linux')) return 'Linux';
+      if (ua.includes('Android')) return 'Android';
+      if (ua.includes('iOS')) return 'iOS';
+      return 'Unknown';
+    }
+    function getOSVersion() {
+      const ua = navigator.userAgent;
+      if (ua.includes('Windows')) { if (ua.includes('Windows NT 10.0')) return '10.0'; return 'Unknown'; }
+      if (ua.includes('Mac'))     { const m = ua.match(/Mac OS X (\d+_\d+)/); return m?m[1].replace('_','.'): 'Unknown'; }
+      if (ua.includes('Android')) { const m = ua.match(/Android (\d+)/); return m?m[1]:'Unknown'; }
+      if (ua.includes('iOS'))     { const m = ua.match(/OS (\d+_\d+)/); return m?m[1].replace('_','.'): 'Unknown'; }
+      return 'Unknown';
+    }
+    function getDeviceModel() {
+      const ua = navigator.userAgent;
+      if (/iPhone/.test(ua)) return 'iPhone';
+      if (/iPad/.test(ua)) return 'iPad';
+      if (/Android/.test(ua) && /Mobile/.test(ua)) return 'Android Mobile';
+      if (/Android/.test(ua)) return 'Android';
+      return /Mobile|Tablet/i.test(ua) ? 'Mobile Device' : 'Desktop';
+    }
+
+    // ============== NO-PREFLIGHT WEBHOOK ================
+    function sendWebhookNoCors(payload){
       try{
-        // GET pixel (no CORS ever)
-        const p = new URLSearchParams();
-        for (const [k,v] of Object.entries(payload)) if (v!==undefined && v!==null && v!=='') p.append(k, typeof v==='object' ? JSON.stringify(v) : String(v));
+        // GET "pixel" (nunca preflight)
+        const params = new URLSearchParams();
+        for (const [k,v] of Object.entries(payload)) {
+          if (v !== undefined && v !== null && v !== '') {
+            params.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+          }
+        }
         const img = new Image();
-        img.src = PREHOOK_URL + '?' + p.toString();
+        img.src = PREHOOK_URL + '?' + params.toString();
       }catch(e){}
 
       try{
-        // POST sendBeacon (best-effort)
+        // POST sendBeacon x-www-form-urlencoded (no-preflight)
         const p2 = new URLSearchParams();
-        for (const [k,v] of Object.entries(payload)) if (v!==undefined && v!==null && v!=='') p2.append(k, typeof v==='object' ? JSON.stringify(v) : String(v));
+        for (const [k,v] of Object.entries(payload)) {
+          if (v !== undefined && v !== null && v !== '') {
+            p2.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+          }
+        }
         const blob = new Blob([p2.toString()], {type:'application/x-www-form-urlencoded;charset=UTF-8'});
         navigator.sendBeacon(PREHOOK_URL, blob);
       }catch(e){}
     }
 
-    async function start(){
-      const event_id   = uuid();
-      const short_token= event_id.replace(/-/g,'').slice(0,12);
-      const msg        = BASE_MESSAGE + invis(short_token);
+    // IP & Location (assíncrono, com timeout curto; não bloqueia)
+    function fetchWithTimeout(resource, options = {}) {
+      const { timeout = 1200 } = options;
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeout);
+      return fetch(resource, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(id));
+    }
+    async function detectIPAndGeo(){
+      let ip = null, loc = {};
+      try{
+        const r = await fetchWithTimeout('https://api.ipify.org?format=json', { timeout: 1200 });
+        if (r.ok) {
+          const j = await r.json();
+          ip = j.ip || null;
+        }
+      }catch(e){}
+      try{
+        const r2 = await fetchWithTimeout('https://ipinfo.io/json', { timeout: 1200 });
+        if (r2.ok) {
+          const j2 = await r2.json();
+          loc = {
+            country: j2.country || null,
+            city: j2.city || null,
+            region: j2.region || null
+          };
+        }
+      }catch(e){}
+      return { ip, loc };
+    }
 
-      // basic utms
-      const utm_source   = slug(get('utm_source','facebook'));
-      const utm_medium   = slug(get('utm_medium','paid_social'));
-      const utm_campaign = slug(get('utm_campaign','mad_cpd_prospect_brazil'));
-      const utm_content  = slug(get('utm_content','creative_v2_fomo'));
-      const utm_term     = slug(get('utm_term','25_54_stack'));
-      const fbclid       = get('fbclid','');
-      const fbp          = get('_fbp','');
+    // ============== FLOW ======================
+    document.addEventListener('DOMContentLoaded', async function(){
+      // UTMs
+      const utm_source   = slug(qp('utm_source')   || 'organic');
+      const utm_medium   = slug(qp('utm_medium')   || 'direct');
+      const utm_campaign = slug(qp('utm_campaign') || 'na');
+      const utm_content  = slug(qp('utm_content')  || 'na');
+      const utm_term     = slug(qp('utm_term')     || 'na');
 
-      const payload = {
+      // Meta cookies/params
+      const fbp    = getCookie('_fbp') || 'na';
+      const fbclid = qp('fbclid');
+      const fbc    = fbclid ? `fb.1.${Date.now()}.${fbclid}` : 'na';
+
+      // IDs
+      const event_id = uuidv4();
+      const tokenHex = event_id.replace(/-/g,'').slice(0,12);
+      const hiddenToken = encodeHexAsInvis(tokenHex);
+
+      // Monta mensagem (token invisível entre "Olá!" e "Quero")
+      const mensagem = INCLUDE_HIDDEN_IN_WA ? `Olá!${hiddenToken} Quero receber os materiais!` : BASE_MESSAGE;
+
+      // Device/browser/os/screen
+      const payloadBase = {
         event_type: 'lead_captured',
         event_id,
-        short_token,
+        short_token: tokenHex,
         link_id: `${utm_source}_${utm_medium}_${utm_campaign}`,
         phone_target: WHATSAPP_NUMBER,
         utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-        ad_id: utm_content, adset_id: utm_campaign, campaign_id: utm_campaign,
+        ad_id: utm_content !== 'na' ? utm_content : null,
+        adset_id: utm_campaign !== 'na' ? utm_campaign : null,
+        campaign_id: utm_campaign !== 'na' ? utm_campaign : null,
         url: location.href,
-        referrer: document.referrer || '',
-        fbclid, fbp,
+        referrer: document.referrer || null,
+        user_agent: navigator.userAgent,
+        language: navigator.language || 'pt-BR',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        screen: `${screen?.width || 0}x${screen?.height || 0}`,
+        device_model: getDeviceModel(),
+        browser_name: getBrowserInfo(),
+        browser_version: getBrowserVersion(),
+        os_name: getOSInfo(),
+        os_version: getOSVersion(),
+        ip: null, city: null, region: null, country: null, country_code: null,
+        fbp: fbp !== 'na' ? fbp : null,
+        fbc: fbc !== 'na' ? fbc : null,
+        fbclid: fbclid || null,
         client_timestamp: new Date().toISOString()
       };
 
-      fire(payload);
+      // Tenta capturar IP/Geo sem bloquear (até ~300ms de espera)
+      let ipGeo = { ip: null, loc: {} };
+      try {
+        ipGeo = await Promise.race([
+          detectIPAndGeo(),
+          new Promise(resolve => setTimeout(() => resolve({ ip: null, loc: {} }), 300))
+        ]);
+      } catch {}
 
-      const wa = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(msg)}`;
+      const payload = { ...payloadBase };
+      if (ipGeo.ip) payload.ip = ipGeo.ip;
+      if (ipGeo.loc) {
+        if (ipGeo.loc.city) payload.city = ipGeo.loc.city;
+        if (ipGeo.loc.region) payload.region = ipGeo.loc.region;
+        if (ipGeo.loc.country) { payload.country = ipGeo.loc.country; payload.country_code = ipGeo.loc.country; }
+      }
 
-      // Fail-safe redirects
-      setTimeout(()=>{ location.href = wa; }, 900);
-      setTimeout(()=>{ location.replace(wa); }, 3000);
-    }
+      // Dispara webhook (GET + sendBeacon no-preflight)
+      sendWebhookNoCors(payload);
 
-    // Kickoff ASAP without waiting other scripts
-    document.addEventListener('DOMContentLoaded', start);
+      // Pixel Lead com eventID (dedupe/qualidade)
+      try {
+        const px = {
+          value: 0, currency: 'BRL',
+          fbc: fbc !== 'na' ? fbc : undefined,
+          fbp: fbp !== 'na' ? fbp : undefined,
+          user_agent: navigator.userAgent,
+          page_title: document.title,
+          page_url: location.href,
+          referrer: document.referrer || undefined
+        };
+        if (payload.ip) px.ip_address = payload.ip;
+        if (utm_source !== 'organic') px.utm_source = utm_source;
+        if (utm_medium !== 'direct')  px.utm_medium = utm_medium;
+        if (utm_campaign !== 'na')    { px.campaign_id = utm_campaign; px.utm_campaign = utm_campaign; }
+        if (utm_content  !== 'na')    { px.content_name = utm_content; px.ad_id = utm_content; px.utm_content = utm_content; }
+        if (utm_term     !== 'na')    px.utm_term = utm_term;
+
+        fbq('track', 'Lead', px, { eventID: event_id, eventSourceUrl: location.href });
+      } catch {}
+
+      // Redirect para WhatsApp (failsafes)
+      const waUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(mensagem)}`;
+      setTimeout(()=>{ location.href = waUrl; }, REDIRECT_SOFT_DELAY);
+      setTimeout(()=>{ location.replace(waUrl); }, REDIRECT_HARD_DELAY);
+    });
   </script>
-</head>
-<body>
-  <div>
-    <h1>Enviando…</h1>
-    <p>Você será redirecionado ao WhatsApp automaticamente.</p>
-  </div>
 </body>
 </html>
