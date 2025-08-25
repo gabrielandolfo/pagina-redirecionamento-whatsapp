@@ -25,8 +25,8 @@
     - Indicadores visuais de status em tempo real
     
     AUTOR: Sistema de Redirecionamento Inteligente
-    VERSÃO: 2.2 - Token Visível "Ref. {token}" + Webhook Otimizado
-    CORREÇÕES: Removida duplicação de event listeners e otimizado sistema de fallback
+    VERSÃO: 2.3 - Token Visível "Cupom: {token}" + Webhook Sem Duplicação
+    CORREÇÕES: Removida duplicação de webhooks, event listeners e otimizado sistema de fallback
     ========================================
   -->
 
@@ -153,131 +153,43 @@
       redirectInProgress = true;
       console.log('🔄 Redirecionamento manual ativado!');
       
-             // Cria a mensagem com token visível como "Ref. {token}"
-       const event_id = uuidv4();
-       const tokenHex = event_id.replace(/-/g,'').slice(0,8); // Reduzido para 8 caracteres para menor tamanho
-       // Token visível no formato "Ref. {token}" - mais simples e compatível
-       const mensagem = `${BASE_MESSAGE}${tokenHex}`;
+      // Cria a mensagem com token visível como "Cupom: {token}"
+      const event_id = uuidv4();
+      const tokenHex = event_id.replace(/-/g,'').slice(0,8); // Reduzido para 8 caracteres para menor tamanho
+      // Token visível no formato "Cupom: {token}" - mais simples e compatível
+      const mensagem = `${BASE_MESSAGE}${tokenHex}`;
       
-      // Prepara e envia webhook ANTES do redirecionamento
+      // ⚠️ REMOVIDO: Webhook manual para evitar duplicação
+      // O webhook já foi enviado automaticamente na função principal
+      console.log('📤 Webhook já enviado automaticamente, pulando envio manual...');
+      
+      // Dispara evento do Facebook Pixel para clique manual
       try {
-        console.log('📤 Enviando webhook antes do redirecionamento manual...');
-        
-        // UTMs (usa valores padrão se não estiverem na URL)
-        const utm_source   = slug(qp('utm_source')   || 'organic');
-        const utm_medium   = slug(qp('utm_medium')   || 'direct');
-        const utm_campaign = slug(qp('utm_campaign') || 'na');
-        const utm_content  = slug(qp('utm_content')  || 'na');
-        const utm_term     = slug(qp('utm_term')     || 'na');
-
-        // Meta cookies/params
-        const fbp    = getCookie('_fbp') || 'na';
-        const fbclid = qp('fbclid');
-        const fbc    = fbclid ? `fb.1.${Date.now()}.${fbclid}` : 'na';
-        
-        // Prepara payload para webhook
-        const payload = {
-          event_type: 'lead_captured_manual',
-          event_id,
-          short_token: tokenHex,
-          link_id: `${utm_source}_${utm_medium}_${utm_campaign}`,
-          phone_target: WHATSAPP_NUMBER,
-          utm_source,
-          utm_medium,
-          utm_campaign,
-          utm_content,
-          utm_term,
-          url: location.href,
-          referrer: document.referrer || null,
-          user_agent: navigator.userAgent,
-          language: navigator.language || 'pt-BR',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-          screen: `${screen?.width || 0}x${screen?.height || 0}`,
-          device_model: getDeviceModel(),
-          browser_name: getBrowserInfo(),
-          browser_version: getBrowserVersion(),
-          os_name: getOSInfo(),
-          os_version: getOSVersion(),
-          ip: userIP !== 'unknown' ? userIP : null,
-          city: userLocation.city !== 'unknown' ? userLocation.city : null,
-          region: userLocation.region !== 'unknown' ? userLocation.region : null,
-          country: userLocation.country_name !== 'unknown' ? userLocation.country_name : null,
-          country_code: userLocation.country !== 'unknown' ? userLocation.country : null,
-          fbp: fbp !== 'na' ? fbp : null,
-          fbc: fbc !== 'na' ? fbc : null,
-          fbclid: fbclid || null,
-          client_timestamp: new Date().toISOString(),
-          redirect_type: 'manual_click'
-        };
-        
-        // Envia webhook com fallback
-        const webhookSuccess = await sendWebhookWithFallback(payload);
-        
-        if (webhookSuccess) {
-          console.log('✅ Webhook enviado com sucesso antes do redirecionamento manual!');
-        } else {
-          console.log('⚠️ Webhook falhou, mas continuando com redirecionamento...');
+        if (fbq) {
+          const pixelPayload = {
+            value: 0,
+            currency: 'BRL',
+            content_name: 'WhatsApp Lead Manual',
+            content_category: 'Lead Generation',
+            content_type: 'product',
+            lead_type: 'whatsapp_redirect_manual',
+            lead_source: 'facebook_ad',
+            redirect_type: 'manual_click',
+            internal_event_id: event_id,
+            internal_token: tokenHex
+          };
+          
+          fbq('track', 'Lead', pixelPayload, {
+            eventID: event_id,
+            eventSourceUrl: location.href,
+            eventSource: 'facebook_ads',
+            eventMedium: 'web_redirect_manual'
+          });
+          
+          console.log('📊 Facebook Pixel disparado para redirecionamento manual:', pixelPayload);
         }
-        
-        // Dispara evento do Facebook Pixel
-        try {
-          if (fbq) {
-            const pixelPayload = {
-              value: 0,
-              currency: 'BRL',
-              content_name: 'WhatsApp Lead Manual',
-              content_category: 'Lead Generation',
-              content_type: 'product',
-              fbc: fbc !== 'na' ? fbc : undefined,
-              fbp: fbp !== 'na' ? fbp : undefined,
-              user_agent: navigator.userAgent,
-              ip_address: userIP !== 'unknown' ? userIP : undefined,
-              country: userLocation.country !== 'unknown' ? userLocation.country : undefined,
-              city: userLocation.city !== 'unknown' ? userLocation.city : undefined,
-              state: userLocation.state !== 'unknown' ? userLocation.state : undefined,
-              utm_source: utm_source !== 'organic' ? utm_source : undefined,
-              utm_medium: utm_medium !== 'direct' ? utm_medium : undefined,
-              utm_campaign: utm_campaign !== 'na' ? utm_campaign : undefined,
-              utm_content: utm_content !== 'na' ? utm_content : undefined,
-              utm_term: utm_term !== 'na' ? utm_term : undefined,
-              page_title: document.title,
-              page_url: location.href,
-              referrer: document.referrer || undefined,
-              device_type: getDeviceModel(),
-              browser_name: getBrowserInfo(),
-              os_name: getOSInfo(),
-              lead_type: 'whatsapp_redirect_manual',
-              lead_source: 'facebook_ad',
-              lead_medium: utm_medium !== 'direct' ? utm_medium : 'organic',
-              lead_campaign: utm_campaign !== 'na' ? utm_campaign : 'direct',
-              internal_event_id: event_id,
-              internal_token: tokenHex,
-              redirect_type: 'manual_click'
-            };
-            
-            // Remove campos undefined
-            Object.keys(pixelPayload).forEach(key => {
-              if (pixelPayload[key] === undefined) {
-                delete pixelPayload[key];
-              }
-            });
-            
-            fbq('track', 'Lead', pixelPayload, {
-              eventID: event_id,
-              eventSourceUrl: location.href,
-              eventSource: 'facebook_ads',
-              eventMedium: 'web_redirect_manual',
-              eventCampaign: utm_campaign !== 'na' ? utm_campaign : 'organic'
-            });
-            
-            console.log('📊 Facebook Pixel disparado para redirecionamento manual:', pixelPayload);
-          }
-        } catch (pixelError) {
-          console.error('❌ Erro no Facebook Pixel manual:', pixelError);
-        }
-        
-      } catch (webhookError) {
-        console.error('❌ Erro ao enviar webhook manual:', webhookError);
+      } catch (pixelError) {
+        console.error('❌ Erro no Facebook Pixel manual:', pixelError);
       }
       
       // Redireciona para WhatsApp com URL otimizada para desktop/mobile
@@ -294,11 +206,11 @@
     // ⚠️ ALTERE ESTAS CONFIGURAÇÕES CONFORME NECESSÁRIO ⚠️
     
     // 💡 NOVO SISTEMA DE TOKEN VISÍVEL:
-    // - Formato: "Ref. {token}" (ex: "Ref. a1b2c3d4")
+    // - Formato: "Cupom: {token}" (ex: "Cupom: a1b2c3d4")
     // - Tamanho: 8 caracteres hexadecimais (0-9, a-f)
     // - Combinações únicas: 16^8 = 4.294.967.296 possibilidades
     // - Vantagens: Simples, visível, compatível com WhatsApp
-    // - Exemplo de mensagem: "Olá! Quero receber os materiais! Ref. a1b2c3d4"
+    // - Exemplo de mensagem: "Olá! Quero receber os materiais! Cupom: a1b2c3d4"
     
     // 🔴 META ADS PIXEL - ALTERE AQUI
     const META_PIXEL_ID = '1242065550945306'; // Substitua pelo seu Pixel ID do Meta Ads
@@ -1038,6 +950,259 @@
       return success;
     }
 
+    // ==== DECODER + CLASSIFIER (visível ou frase gatilho) ====
+    // V.2.4 — limpa invisíveis, normaliza texto, pega token visível e classifica intenção
+    // ---------- Utils ----------
+    function stripZeroWidth(s) {
+      return s.replace(/[\u200B-\u200D\u2060-\u206F\uFEFF\u00AD\u180E]/g, '');
+    }
+
+    function normalizeSpaces(s) {
+      return s.replace(/\s+/g, ' ').trim();
+    }
+
+    function normalizeText(s) {
+      // remove acentos e põe minúsculas p/ comparação robusta
+      return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+
+    // ---------- Token: visível "Cupom: XXXXXXXX" + "Ref. XXXXXXXX" + fallback ----------
+    function decodeVisibleToken(text) {
+      // NOVO FORMATO: "Cupom: XXXXXXXX"
+      const cupomPattern = /Cupom:\s*([0-9a-fA-F]{8})/i;
+      const cupomMatch = text.match(cupomPattern);
+      if (cupomMatch) {
+        const tokenHex = cupomMatch[1].toLowerCase();
+        return {
+          token_hex: tokenHex,
+          reason: 'ok',
+          scheme: 'visible_system_v2.4_cupom',
+          pattern_matched: cupomMatch[0],
+          position: {
+            start: cupomMatch.index,
+            end: cupomMatch.index + cupomMatch[0].length
+          }
+        };
+      }
+
+      // FORMATO LEGADO: "Ref. XXXXXXXX" (mantido para compatibilidade)
+      const refPattern = /Ref\.\s*([0-9a-fA-F]{8})/i;
+      const refMatch = text.match(refPattern);
+      if (refMatch) {
+        const tokenHex = refMatch[1].toLowerCase();
+        return {
+          token_hex: tokenHex,
+          reason: 'ok',
+          scheme: 'visible_system_v2.4_ref_legacy',
+          pattern_matched: refMatch[0],
+          position: {
+            start: refMatch.index,
+            end: refMatch.index + refMatch[0].length
+          }
+        };
+      }
+
+      // FALLBACK: busca por qualquer sequência de 8 caracteres hexadecimais
+      const hexPattern = /([0-9a-fA-F]{8})/g;
+      const hexMatches = text.match(hexPattern);
+      if (hexMatches && hexMatches.length > 0) {
+        const tokenHex = hexMatches[0].toLowerCase();
+        return {
+          token_hex: tokenHex,
+          reason: 'fallback_pattern',
+          scheme: 'visible_system_v2.4_fallback',
+          total_matches: hexMatches.length,
+          all_matches: hexMatches,
+          warning: 'Token detectado por padrão hex, mas formato não é padrão'
+        };
+      }
+
+      // FALLBACK AVANÇADO: busca por sequências de 6-12 caracteres hex
+      const flexibleHexPattern = /([0-9a-fA-F]{6,12})/g;
+      const flexibleMatches = text.match(flexibleHexPattern);
+      if (flexibleMatches && flexibleMatches.length > 0) {
+        const tokenHex = flexibleMatches[0].toLowerCase();
+        return {
+          token_hex: tokenHex,
+          reason: 'flexible_fallback',
+          scheme: 'visible_system_v2.4_flexible',
+          total_matches: flexibleMatches.length,
+          all_matches: flexibleMatches,
+          warning: `Token de ${tokenHex.length} caracteres detectado (formato flexível)`,
+          original_length: tokenHex.length
+        };
+      }
+
+      return {
+        token_hex: null,
+        reason: 'no_token_found',
+        scheme: 'visible_system_v2.4',
+        text_analyzed: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+        text_length: text.length,
+        suggestions: [
+          'Verificar se a mensagem contém "Cupom: XXXXXXXX"',
+          'Verificar se a mensagem contém "Ref. XXXXXXXX"',
+          'Verificar se há sequências de caracteres hexadecimais',
+          'Verificar se o texto não foi corrompido pelo WhatsApp'
+        ]
+      };
+    }
+
+    // ---------- Classificador de Intenção ----------
+    function classifyIntent(text) {
+      const normalized = normalizeText(text);
+      
+      // Saudação
+      if (/\b(oi|ola|olá|hey|ei|fala|opa|eai|e aí)\b/.test(normalized)) {
+        return {
+          intent: 'saudacao',
+          confidence: 0.9,
+          keywords: ['oi', 'olá', 'hey', 'ei', 'fala', 'opa', 'eai'],
+          response_type: 'greeting'
+        };
+      }
+
+      // Comprovante
+      if (/\b(comprovante|recibo|nota|fiscal|boleto|pagamento|pago|paga)\b/.test(normalized)) {
+        return {
+          intent: 'comprovante',
+          confidence: 0.85,
+          keywords: ['comprovante', 'recibo', 'nota', 'fiscal', 'boleto', 'pagamento'],
+          response_type: 'document_request'
+        };
+      }
+
+      // Ocupado
+      if (/\b(ocupado|ocupada|indisponivel|indisponível|nao|não|negativo|n)\b/.test(normalized)) {
+        return {
+          intent: 'ocupado',
+          confidence: 0.8,
+          keywords: ['ocupado', 'indisponível', 'não', 'negativo'],
+          response_type: 'unavailable'
+        };
+      }
+
+      // Material/Produto
+      if (/\b(material|materiais|produto|produtos|receber|enviar|mandar|quero|gostaria|desejo)\b/.test(normalized)) {
+        return {
+          intent: 'material_request',
+          confidence: 0.75,
+          keywords: ['material', 'produto', 'receber', 'enviar', 'quero'],
+          response_type: 'product_request'
+        };
+      }
+
+      // Dúvida/Informação
+      if (/\b(duvida|dúvida|pergunta|como|quando|onde|quanto|preco|preço|valor|custo)\b/.test(normalized)) {
+        return {
+          intent: 'duvida',
+          confidence: 0.7,
+          keywords: ['dúvida', 'pergunta', 'como', 'quando', 'onde', 'preço'],
+          response_type: 'information_request'
+        };
+      }
+
+      // Agradecimento
+      if (/\b(obrigado|obrigada|valeu|valeu|agradeco|agradeço|grato|grata|thanks|thank)\b/.test(normalized)) {
+        return {
+          intent: 'agradecimento',
+          confidence: 0.8,
+          keywords: ['obrigado', 'valeu', 'agradeço', 'grato'],
+          response_type: 'gratitude'
+        };
+      }
+
+      // Despedida
+      if (/\b(tchau|ate|até|falou|flw|bye|adeus|ate logo|até logo)\b/.test(normalized)) {
+        return {
+          intent: 'despedida',
+          confidence: 0.75,
+          keywords: ['tchau', 'até', 'falou', 'bye', 'adeus'],
+          response_type: 'farewell'
+        };
+      }
+
+      return {
+        intent: 'nao_identificado',
+        confidence: 0.1,
+        keywords: [],
+        response_type: 'unknown',
+        text_analyzed: normalized.substring(0, 50)
+      };
+    }
+
+    // ---------- Decoder Principal ----------
+    function decodeMessage(text) {
+      // Limpa o texto de caracteres invisíveis
+      const cleanText = stripZeroWidth(text);
+      const normalizedText = normalizeSpaces(cleanText);
+      
+      // Decodifica o token
+      const tokenResult = decodeVisibleToken(normalizedText);
+      
+      // Classifica a intenção
+      const intentResult = classifyIntent(normalizedText);
+      
+      // Resultado completo
+      return {
+        // Dados do token
+        token: tokenResult,
+        
+        // Dados da intenção
+        intent: intentResult,
+        
+        // Dados do texto original
+        text: {
+          original: text,
+          cleaned: cleanText,
+          normalized: normalizedText,
+          length: text.length,
+          clean_length: cleanText.length
+        },
+        
+        // Metadados
+        timestamp: new Date().toISOString(),
+        decoder_version: '2.4',
+        decoder_scheme: tokenResult.scheme || 'unknown',
+        
+        // Status geral
+        success: tokenResult.token_hex !== null,
+        has_token: tokenResult.token_hex !== null,
+        has_intent: intentResult.intent !== 'nao_identificado',
+        
+        // Recomendações
+        recommendations: []
+      };
+    }
+
+    // ---------- Função de Teste ----------
+    function testDecoder() {
+      console.log('🧪 TESTANDO DECODER V2.4:');
+      
+      const testCases = [
+        'Olá! Quero receber os materiais! Cupom: a1b2c3d4',
+        'Oi, gostaria dos produtos Ref. e5f6g7h8',
+        'Quero o material Cupom: 12345678',
+        'Oi, tudo bem?',
+        'Preciso do comprovante',
+        'Estou ocupado agora',
+        'Obrigado pelos materiais!',
+        'Tchau, até mais!'
+      ];
+      
+      testCases.forEach((testCase, index) => {
+        console.log(`\n📝 Teste ${index + 1}: "${testCase}"`);
+        const result = decodeMessage(testCase);
+        
+        console.log('🔍 Token:', result.token);
+        console.log('🎯 Intenção:', result.intent);
+        console.log('✅ Sucesso:', result.success);
+      });
+    }
+
+    // Executa teste automático
+    testDecoder();
+
     // ============== FLOW ======================
     // Executa imediatamente para enviar webhook o quanto antes
     // ⚠️ IMPORTANTE: Esta função executa apenas UMA vez por carregamento da página
@@ -1070,7 +1235,7 @@
         formato_mensagem: `${BASE_MESSAGE}${tokenHex}`
       });
 
-      // Mensagem final: TOKEN VISÍVEL como "Ref. {token}" - mais simples e compatível
+      // Mensagem final: TOKEN VISÍVEL como "Cupom: {token}" - mais simples e compatível
       const mensagem = `${BASE_MESSAGE}${tokenHex}`;
 
       // Dedupe client (evita repetir prehook no refresh)
