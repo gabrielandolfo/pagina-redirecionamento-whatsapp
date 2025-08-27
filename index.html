@@ -25,8 +25,8 @@
     - Indicadores visuais de status em tempo real
     
     AUTOR: Sistema de Redirecionamento Inteligente
-    VERSÃO: 2.3 - Token Visível "Cupom: {token}" + Webhook Sem Duplicação
-    CORREÇÕES: Removida duplicação de webhooks, event listeners e otimizado sistema de fallback
+    VERSÃO: 2.4 - Token Visível "Cupom: {token}" + Sistema Dinâmico Supabase
+    CORREÇÕES: Sistema dinâmico Supabase, número fixo removido, webhooks otimizados
     ========================================
   -->
 
@@ -42,8 +42,148 @@
   </script>
   <noscript>
     <img height="1" width="1" style="display:none"
-         src="https://www.facebook.com/tr?id=1465089154541888&ev=PageView&noscript=1"/>
+         src="https://www.facebook.com/tr?id=1722654601715514&ev=PageView&noscript=1"/>
   </noscript>
+
+  <!-- Script para captura robusta do FBP -->
+  <script>
+    // Função para capturar FBP de forma robusta
+    function getRobustFBP() {
+      try {
+        // 1. Tenta cookie _fbp primeiro
+        const fbpCookie = getCookie('_fbp');
+        if (fbpCookie && fbpCookie !== 'na' && fbpCookie.length > 10) {
+          return fbpCookie;
+        }
+        
+        // 2. Tenta localStorage como fallback
+        const fbpLocal = localStorage.getItem('_fbp');
+        if (fbpLocal && fbpLocal !== 'na' && fbpLocal.length > 10) {
+          return fbpLocal;
+        }
+        
+        // 3. Tenta sessionStorage como fallback
+        const fbpSession = sessionStorage.getItem('_fbp');
+        if (fbpSession && fbpSession !== 'na' && fbpSession.length > 10) {
+          return fbpSession;
+        }
+        
+        // 4. Se não encontrou, tenta gerar um FBP válido
+        const generatedFBP = generateFBP();
+        if (generatedFBP) {
+          // Salva para uso futuro
+          try {
+            localStorage.setItem('_fbp', generatedFBP);
+            sessionStorage.setItem('_fbp', generatedFBP);
+          } catch (e) {
+            // Ignora erros de storage
+          }
+          return generatedFBP;
+        }
+        
+        return 'na';
+      } catch (error) {
+        return 'na';
+      }
+    }
+    
+    // Função para gerar FBP válido se não existir
+    function generateFBP() {
+      try {
+        // Formato: fb.1.1234567890.1234567890
+        const timestamp = Math.floor(Date.now() / 1000);
+        const random = Math.floor(Math.random() * 1000000000);
+        return `fb.1.${timestamp}.${random}`;
+      } catch (error) {
+        return null;
+      }
+    }
+    
+    // Função para capturar FBC de forma robusta
+    function getRobustFBC() {
+      try {
+        // 1. Tenta parâmetro fbclid da URL
+        const fbclid = qp('fbclid');
+        if (fbclid && fbclid.length > 10) {
+          return `fb.1.${Date.now()}.${fbclid}`;
+        }
+        
+        // 2. Tenta localStorage como fallback
+        const fbcLocal = localStorage.getItem('_fbc');
+        if (fbcLocal && fbcLocal !== 'na' && fbcLocal.length > 10) {
+          return fbcLocal;
+        }
+        
+        // 3. Tenta sessionStorage como fallback
+        const fbcSession = sessionStorage.getItem('_fbc');
+        if (fbcSession && fbcSession !== 'na' && fbcSession.length > 10) {
+          return fbcSession;
+        }
+        
+        return 'na';
+      } catch (error) {
+        return 'na';
+      }
+    }
+    
+    // Função para capturar fbclid de forma robusta
+    function getRobustFBCLID() {
+      try {
+        // 1. Tenta parâmetro da URL
+        const fbclid = qp('fbclid');
+        if (fbclid && fbclid.length > 10) {
+          // Salva para uso futuro
+          try {
+            localStorage.setItem('_fbclid', fbclid);
+            sessionStorage.setItem('_fbclid', fbclid);
+          } catch (e) {
+            // Ignora erros de storage
+          }
+          return fbclid;
+        }
+        
+        // 2. Tenta localStorage como fallback
+        const fbclidLocal = localStorage.getItem('_fbclid');
+        if (fbclidLocal && fbclidLocal.length > 10) {
+          return fbclidLocal;
+        }
+        
+        // 3. Tenta sessionStorage como fallback
+        const fbclidSession = sessionStorage.getItem('_fbclid');
+        if (fbclidSession && fbclidSession.length > 10) {
+          return fbclidSession;
+        }
+        
+        return null;
+      } catch (error) {
+        return null;
+      }
+    }
+    
+    // Função para aguardar o Facebook Pixel estar carregado
+    function waitForFacebookPixel() {
+      return new Promise((resolve) => {
+        if (typeof fbq !== 'undefined' && fbq.loaded) {
+          resolve();
+          return;
+        }
+        
+        // Aguarda o pixel carregar
+        const checkPixel = setInterval(() => {
+          if (typeof fbq !== 'undefined' && fbq.loaded) {
+            clearInterval(checkPixel);
+            resolve();
+          }
+        }, 100);
+        
+        // Timeout de segurança
+        setTimeout(() => {
+          clearInterval(checkPixel);
+          resolve();
+        }, 5000);
+      });
+    }
+  </script>
 
   <style>
     body {
@@ -131,68 +271,85 @@
       <div class="loading-dot"></div>
       <div class="loading-dot"></div>
     </div>
-    Aguarde...
+    Abrindo WhatsApp...
   </div>
   
   <div class="redirect-text">
     Redirecionando para o WhatsApp
   </div>
+  
+  <div class="click-hint">
+    Clique ou toque em qualquer lugar para conectar agora
+  </div>
 
+  <!-- Carrega configurações primeiro -->
+  <script src="config.js"></script>
+  
+
+  
   <script>
     // ============== REDIRECT FUNCTIONS ======================
     let redirectInProgress = false;
     
-    // Função para redirecionar para WhatsApp
-    async function redirectToWhatsApp() {
-      if (redirectInProgress) return; // Evita múltiplos redirects
-      
-      redirectInProgress = true;
-      console.log('🔄 Redirecionamento manual ativado!');
-      
-      // Cria a mensagem com token visível como "Cupom: {token}"
-      const event_id = uuidv4();
-      const tokenHex = event_id.replace(/-/g,'').slice(0,8); // Reduzido para 8 caracteres para menor tamanho
-      // Token visível no formato "Cupom: {token}" - mais simples e compatível
-      const mensagem = `${BASE_MESSAGE}${tokenHex}`;
-      
-      // ⚠️ REMOVIDO: Webhook manual para evitar duplicação
-      // O webhook já foi enviado automaticamente na função principal
-      console.log('📤 Webhook já enviado automaticamente, pulando envio manual...');
-      
-      // Dispara evento do Facebook Pixel para clique manual
-      try {
-        if (fbq) {
-          const pixelPayload = {
-            value: 0,
-            currency: 'BRL',
-            content_name: 'WhatsApp Lead Manual',
-            content_category: 'Lead Generation',
-            content_type: 'product',
-            lead_type: 'whatsapp_redirect_manual',
-            lead_source: 'facebook_ad',
-            redirect_type: 'manual_click',
-            internal_event_id: event_id,
-            internal_token: tokenHex
-          };
-          
-          fbq('track', 'Lead', pixelPayload, {
-            eventID: event_id,
-            eventSourceUrl: location.href,
-            eventSource: 'facebook_ads',
-            eventMedium: 'web_redirect_manual'
-          });
-          
-          console.log('📊 Facebook Pixel disparado para redirecionamento manual:', pixelPayload);
-        }
-      } catch (pixelError) {
-        console.error('❌ Erro no Facebook Pixel manual:', pixelError);
-      }
-      
-      // Redireciona para WhatsApp com URL otimizada para desktop/mobile
-      console.log('🔄 Redirecionando para WhatsApp...');
-      const waUrl = createWhatsAppURL(mensagem);
-      window.location.replace(waUrl);
-    }
+         // Função para redirecionar para WhatsApp
+     async function redirectToWhatsApp() {
+       if (redirectInProgress) return; // Evita múltiplos redirects
+       
+       redirectInProgress = true;
+       
+       // Cria a mensagem com token visível como "Cupom: {token}"
+       const event_id = uuidv4();
+       const tokenHex = event_id.replace(/-/g,'').slice(0,8); // Reduzido para 8 caracteres para menor tamanho
+       // Token visível no formato "Cupom: {token}" - mais simples e compatível
+       const mensagem = `${BASE_MESSAGE}${tokenHex}`;
+       
+       // ⚠️ REMOVIDO: Webhook manual para evitar duplicação
+       // O webhook já foi enviado automaticamente na função principal
+       
+       // Dispara evento do Facebook Pixel para clique manual
+       try {
+         if (fbq) {
+           const pixelPayload = {
+             value: 0,
+             currency: 'BRL',
+             content_name: 'WhatsApp Lead Manual',
+             content_category: 'Lead Generation',
+             content_type: 'product',
+             lead_type: 'whatsapp_redirect_manual',
+             lead_source: 'facebook_ad',
+             redirect_type: 'manual_click',
+             internal_event_id: event_id,
+             internal_token: tokenHex
+           };
+           
+           fbq('track', 'Lead', pixelPayload, {
+             eventID: event_id,
+             eventSourceUrl: location.href,
+             eventSource: 'facebook_ads',
+             eventMedium: 'web_redirect_manual'
+           });
+         }
+       } catch (pixelError) {
+         // Erro silencioso em produção
+       }
+       
+       // Busca número ativo do WhatsApp (usa cache se disponível)
+       let activeNumber = window.ACTIVE_MSISDN || WHATSAPP_FALLBACK;
+       
+       // Se não tem número ativo definido, busca no Supabase
+       if (!window.ACTIVE_MSISDN) {
+         try {
+           activeNumber = await getActiveWhatsAppNumber();
+           window.ACTIVE_MSISDN = activeNumber; // Cache para uso futuro
+         } catch (error) {
+           activeNumber = WHATSAPP_FALLBACK;
+         }
+       }
+       
+       // Redireciona para WhatsApp com URL otimizada para desktop/mobile
+       const waUrl = createWhatsAppURL(activeNumber, mensagem);
+       window.location.replace(waUrl);
+     }
     
     // Event listeners para clique e touch (APENAS UM por tipo)
     document.addEventListener('click', redirectToWhatsApp);
@@ -208,77 +365,84 @@
     // - Vantagens: Simples, visível, compatível com WhatsApp
     // - Exemplo de mensagem: "Olá! Quero receber os materiais! Cupom: a1b2c3d4"
     
-    // 🔴 META ADS PIXEL - ALTERE AQUI
-    const META_PIXEL_ID = '1242065550945306'; // Substitua pelo seu Pixel ID do Meta Ads
-    
-    // 📱 WHATSAPP - ALTERE AQUI
-    const WHATSAPP_NUMBER = '5535991712235'; // Substitua pelo seu número do WhatsApp
-    const BASE_MESSAGE    = 'Olá! Quero receber os materiais! Cupom: '; // Mensagem visível para o usuário + prefixo do token
-    
-    // 🔗 WEBHOOK - ALTERE AQUI
-    const PREHOOK_URL     = 'https://webhook.servidorrrdigital.site/webhook/redirect'; // URL do seu webhook n8n
-    
-    // ⚙️ CONFIGURAÇÕES AVANÇADAS (altere apenas se necessário)
-    const REDIRECT_DELAY  = 5000; // ms - delay antes do redirect automático
-    const DEDUPE_TTL_MS   = 5 * 60 * 1000; // 5 min - tempo para evitar duplicatas
-    const WEBHOOK_RETRY_DELAY = 2000; // ms entre tentativas de webhook
-    const MAX_WEBHOOK_RETRIES = 5; // máximo de tentativas de webhook
-    const IP_TIMEOUT = 8000; // timeout para APIs de IP
-    const GEO_TIMEOUT = 10000; // timeout para APIs de geolocalização
+    // 🔴 CONFIGURAÇÕES JÁ CARREGADAS DO CONFIG.JS
+    // As variáveis META_PIXEL_ID, SUPABASE_URL, etc. já estão disponíveis globalmente
 
          // ============== HELPERS ===================
      
-     // Inicializa Facebook Pixel após as configurações serem definidas
-     if (typeof fbq !== 'undefined') {
-       fbq('init', META_PIXEL_ID);
-       fbq('track', 'PageView');
-       console.log('✅ Facebook Pixel inicializado com ID:', META_PIXEL_ID);
-     }
+           // Inicializa Facebook Pixel após as configurações serem definidas
+      // Aguarda o pixel estar carregado antes de inicializar
+      waitForFacebookPixel().then(() => {
+        if (typeof fbq !== 'undefined') {
+          fbq('init', META_PIXEL_ID);
+          fbq('track', 'PageView');
+        }
+      }).catch(() => {
+        // Fallback se o pixel não carregar
+        if (typeof fbq !== 'undefined') {
+          fbq('init', META_PIXEL_ID);
+          fbq('track', 'PageView');
+        }
+      });
      
      const qp = (n)=> new URLSearchParams(location.search).get(n);
     function getCookie(k){
       const v = `; ${document.cookie}`.split(`; ${k}=`); return v.length === 2 ? v.pop().split(';').shift() : null;
     }
     
-    // Função para criar URL do WhatsApp otimizada para desktop/mobile
-    function createWhatsAppURL(message) {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isAndroid = /Android/i.test(navigator.userAgent);
-      
-      console.log('📱 Detecção de dispositivo:', {
-        isMobile,
-        isIOS,
-        isAndroid,
-        userAgent: navigator.userAgent.substring(0, 100) + '...'
-      });
-      
-      // Para dispositivos móveis, usa a API padrão do WhatsApp
-      if (isMobile) {
-        const waUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(message)}`;
-        console.log('📱 URL para mobile:', waUrl);
-        return waUrl;
-      }
-      
-      // Para desktop, usa estratégias diferentes para garantir que a mensagem apareça
-      if (isIOS) {
-        // iOS desktop - tenta usar protocolo whatsapp://
-        const waUrl = `whatsapp://send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(message)}`;
-        console.log('🍎 URL para iOS desktop:', waUrl);
-        return waUrl;
-      } else if (isAndroid) {
-        // Android desktop - tenta usar protocolo whatsapp://
-        const waUrl = `whatsapp://send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(message)}`;
-        console.log('🤖 URL para Android desktop:', waUrl);
-        return waUrl;
-      } else {
-        // Desktop Windows/Mac/Linux - usa múltiplas estratégias
-        // Primeira tentativa: API web com parâmetros otimizados
-        const waUrl = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(message)}&app_absent=0`;
-        console.log('💻 URL para desktop:', waUrl);
-        return waUrl;
-      }
-    }
+         // Função para criar URL do WhatsApp otimizada para desktop/mobile
+     function createWhatsAppURL(msisdn, message) {
+       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+       const isAndroid = /Android/i.test(navigator.userAgent);
+       
+       // Para dispositivos móveis, usa a API padrão do WhatsApp
+       if (isMobile) {
+         return `https://api.whatsapp.com/send?phone=${encodeURIComponent(msisdn)}&text=${encodeURIComponent(message)}`;
+       }
+       
+       // Para desktop, usa estratégias diferentes para garantir que a mensagem apareça
+       if (isIOS) {
+         // iOS desktop - tenta usar protocolo whatsapp://
+         return `whatsapp://send?phone=${encodeURIComponent(msisdn)}&text=${encodeURIComponent(message)}`;
+       } else if (isAndroid) {
+         // Android desktop - tenta usar protocolo whatsapp://
+         return `whatsapp://send?phone=${encodeURIComponent(msisdn)}&text=${encodeURIComponent(message)}`;
+       } else {
+         // Desktop Windows/Mac/Linux - usa múltiplas estratégias
+         // Primeira tentativa: API web com parâmetros otimizados
+         return `https://api.whatsapp.com/send?phone=${encodeURIComponent(msisdn)}&text=${encodeURIComponent(message)}&app_absent=0`;
+       }
+     }
+    
+         // 🔍 Busca número ativo do WhatsApp no Supabase (nova estrutura da tabela)
+     async function getActiveWhatsAppNumber() {
+       try {
+         // Query otimizada para a nova estrutura da tabela wa_numbers
+         const response = await fetch(`${SUPABASE_URL}/rest/v1/wa_numbers?status=eq.up&order=weight.asc&limit=1`, {
+           headers: {
+             'apikey': SUPABASE_ANON_KEY,
+             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+             'Content-Type': 'application/json'
+           }
+         });
+         
+         if (!response.ok) {
+           return WHATSAPP_FALLBACK;
+         }
+         
+         const data = await response.json();
+         
+         if (data && data.length > 0 && data[0].msisdn) {
+           return data[0].msisdn;
+         } else {
+           return WHATSAPP_FALLBACK;
+         }
+       } catch (error) {
+         return WHATSAPP_FALLBACK;
+       }
+     }
+    
     function uuidv4(){
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
         const r = crypto.getRandomValues(new Uint8Array(1))[0] & 15;
@@ -369,43 +533,7 @@
 
          // Função de teste para verificar compatibilidade
      function testInvisibleToken() {
-       const testHex = 'abc123def456';
-       const invisibleToken = encodeHexAsInvis(testHex);
-       const positionalToken = encodeHexAsPositional(testHex);
-       const isAndroid = /Android/i.test(navigator.userAgent);
-       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-       
-       console.log('🧪 TESTE DE COMPATIBILIDADE DOS TOKENS:');
-       console.log('📱 Plataforma detectada:', {
-         android: isAndroid,
-         ios: isIOS,
-         mobile: isMobile,
-         userAgent: navigator.userAgent.substring(0, 100) + '...'
-       });
-       console.log('🔍 Token original (hex):', testHex);
-       console.log('👻 Token invisível (legado):', invisibleToken);
-       console.log('🎯 Token posicional (novo):', positionalToken);
-       console.log('📏 Comprimento dos tokens:', {
-         invisivel: invisibleToken.length,
-         posicional: positionalToken.length
-       });
-       console.log('✅ Sistema híbrido implementado!');
-       console.log('🔐 Mapeamento POSICIONAL usado:', {
-         '0': '\\u200B (ZWSP)', '1': '\\u200C (ZWNJ)', '2': '\\u200D (ZWJ)', '3': '\\u2060 (WJ)',
-         '4': '\\u2061 (FX)', '5': '\\u2062 (INV TIMES)', '6': '\\u2063 (INV SEP)', '7': '\\u2064 (INV PLUS)',
-         '8': '\\u2065 (INV PLUS)', '9': '\\u2066 (LTR ISO)', '10': '\\u2067 (RTL ISO)', '11': '\\u2068 (FS ISO)',
-         '12': '\\u2069 (PD ISO)', '13': '\\u206A (ISS)', '14': '\\u206B (ASS)', '15': '\\u206C (IAFS)'
-       });
-       
-       // Teste do novo sistema de token visível
-       const newTokenHex = testHex.slice(0, 8);
-       console.log('🆕 NOVO SISTEMA DE TOKEN VISÍVEL:');
-       console.log('📝 Formato da mensagem:', `${BASE_MESSAGE}${newTokenHex}`);
-       console.log('🔢 Token gerado:', newTokenHex);
-       console.log('📏 Comprimento do token:', newTokenHex.length);
-       console.log('🎲 Combinações únicas possíveis:', Math.pow(16, 8));
-       console.log('💡 Exemplo de uso:', `"Olá! Quero receber os materiais! Ref. ${newTokenHex}"`);
+       // Teste silencioso em produção
      }
 
     // ============== IP & LOCATION HELPERS ======================
@@ -425,46 +553,38 @@
       'https://wtfismyip.com/json'
     ];
 
-    // Tenta obter IP e localização real via múltiplas APIs
-    async function getIPAndLocation() {
-      console.log('🔍 Iniciando captura de IP...');
+         // Tenta obter IP e localização real via múltiplas APIs
+     async function getIPAndLocation() {
       
-      // Array de promises para executar em paralelo
-      const ipPromises = IP_APIS.map(async (apiUrl, index) => {
-        try {
-          console.log(`🌐 Tentativa ${index + 1}: ${apiUrl}`);
-          
-          // Cria um AbortController para timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), IP_TIMEOUT);
-          
-          const ipResponse = await fetch(apiUrl, { 
-            method: 'GET',
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (ipResponse.ok) {
-            const ipData = await ipResponse.json();
-            
-            // Diferentes APIs retornam o IP em campos diferentes
-            const detectedIP = ipData.ip || ipData.ipAddress || ipData.query || ipData.ip_addr;
-            
-            if (detectedIP && detectedIP !== 'unknown') {
-              console.log(`✅ IP capturado via API ${index + 1}:`, detectedIP);
-              return { ip: detectedIP, apiIndex: index };
-            }
-          }
-        } catch (error) {
-          if (error.name === 'AbortError') {
-            console.log(`⏰ Timeout na API ${index + 1}: ${apiUrl}`);
-          } else {
-            console.log(`❌ Falha na API ${index + 1}:`, error.message);
-          }
-        }
-        return null;
-      });
+             // Array of promises to execute in parallel
+       const ipPromises = IP_APIS.map(async (apiUrl, index) => {
+         try {
+           // Cria um AbortController para timeout
+           const controller = new AbortController();
+           const timeoutId = setTimeout(() => controller.abort(), IP_TIMEOUT);
+           
+           const ipResponse = await fetch(apiUrl, { 
+             method: 'GET',
+             signal: controller.signal
+           });
+           
+           clearTimeout(timeoutId);
+           
+           if (ipResponse.ok) {
+             const ipData = await ipResponse.json();
+             
+             // Diferentes APIs retornam o IP em campos diferentes
+             const detectedIP = ipData.ip || ipData.ipAddress || ipData.query || ipData.ip_addr;
+             
+             if (detectedIP && detectedIP !== 'unknown') {
+               return { ip: detectedIP, apiIndex: index };
+             }
+           }
+         } catch (error) {
+           // Error handling silent in production
+         }
+         return null;
+       });
 
       // Aguarda todas as promises e pega o primeiro resultado válido
       const results = await Promise.allSettled(ipPromises);
@@ -472,44 +592,30 @@
         result.status === 'fulfilled' && result.value !== null
       );
 
-      if (validResult && validResult.value) {
-        userIP = validResult.value.ip;
-        console.log('✅ IP capturado com sucesso:', userIP);
-        
-        // Com o IP real, busca localização via múltiplas APIs
-        try {
-          await getLocationByIP(userIP);
-        } catch (geoError) {
-          console.log('⚠️ Erro ao obter localização:', geoError.message);
-        }
-      } else {
-        console.log('⚠️ Todas as APIs falharam na captura de IP');
-        
-        // Usa dados do navegador como fallback
-        const browserData = getBrowserLocation();
-        userLocation = {
-          ...userLocation,
-          country: browserData.country,
-          country_name: browserData.country_name,
-          city: 'unknown', // Não conseguimos capturar cidade sem IP
-          region: 'unknown', // Não conseguimos capturar estado sem IP
-          state: 'unknown',
-          postal_code: null // Não conseguimos capturar CEP sem IP
-        };
-        console.log('🌐 Usando dados do navegador como fallback:', userLocation);
-      }
-      
-      ipDetectionComplete = true;
-      
-      // Log final de todos os dados capturados
-      console.log('📊 RESUMO FINAL - Dados de localização capturados:', {
-        ip: userIP,
-        cidade: userLocation.city,
-        estado: userLocation.state,
-        pais: userLocation.country_name,
-        cep: userLocation.postal_code,
-        regiao: userLocation.region
-      });
+             if (validResult && validResult.value) {
+         userIP = validResult.value.ip;
+         
+         // Com o IP real, busca localização via múltiplas APIs
+         try {
+           await getLocationByIP(userIP);
+         } catch (geoError) {
+           // Error handling silent in production
+         }
+       } else {
+         // Usa dados do navegador como fallback
+         const browserData = getBrowserLocation();
+         userLocation = {
+           ...userLocation,
+           country: browserData.country,
+           country_name: browserData.country_name,
+           city: 'unknown', // Não conseguimos capturar cidade sem IP
+           region: 'unknown', // Não conseguimos capturar estado sem IP
+           state: 'unknown',
+           postal_code: null // Não conseguimos capturar CEP sem IP
+         };
+       }
+       
+       ipDetectionComplete = true;
     }
 
          // Função separada para obter localização por IP
@@ -530,37 +636,28 @@
       
       let geoData = null;
       
-      // Tenta cada API de geolocalização com retry
-      for (let j = 0; j < GEO_APIS.length && !geoData; j++) {
-        try {
-          console.log(`🌍 Tentativa de geolocalização: API ${j + 1} - ${GEO_APIS[j]}`);
-          
-          // Cria um AbortController para timeout
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), GEO_TIMEOUT);
-          
-          const geoResponse = await fetch(GEO_APIS[j], { 
-            method: 'GET',
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (geoResponse.ok) {
-            geoData = await geoResponse.json();
-            console.log(`✅ Geolocalização capturada via API ${j + 1}:`, geoData);
-            break; // Sai do loop se conseguiu
-          } else {
-            console.log(`⚠️ API ${j + 1} retornou status ${geoResponse.status}`);
-          }
-        } catch (error) {
-          if (error.name === 'AbortError') {
-            console.log(`⏰ Timeout na API de geolocalização ${j + 1}`);
-          } else {
-            console.log(`⚠️ Falha na API ${j + 1}:`, error.message);
-          }
-        }
-      }
+             // Tenta cada API de geolocalização com retry
+       for (let j = 0; j < GEO_APIS.length && !geoData; j++) {
+         try {
+           // Cria um AbortController para timeout
+           const controller = new AbortController();
+           const timeoutId = setTimeout(() => controller.abort(), GEO_TIMEOUT);
+           
+           const geoResponse = await fetch(GEO_APIS[j], { 
+             method: 'GET',
+             signal: controller.signal
+           });
+           
+           clearTimeout(timeoutId);
+           
+           if (geoResponse.ok) {
+             geoData = await geoResponse.json();
+             break; // Sai do loop se conseguiu
+           }
+         } catch (error) {
+           // Error handling silent in production
+         }
+       }
       
       // Processa dados de geolocalização de diferentes APIs
       if (geoData) {
@@ -574,37 +671,20 @@
           postal_code: geoData.postal || geoData.zip || geoData.postal_code || geoData.zipcode || null
         };
         
-        // Log detalhado dos dados capturados
-        console.log('🌍 Localização real detectada via IP:', userLocation);
-        console.log('📮 CEP capturado:', userLocation.postal_code);
-        console.log('🏙️ Cidade capturada:', userLocation.city);
-        console.log('🏛️ Estado capturado:', userLocation.state);
-        console.log('🌎 País capturado:', userLocation.country);
-        
-                 // Log de sucesso da localização
-         const locationText = `${userLocation.city !== 'unknown' ? userLocation.city + ', ' : ''}${userLocation.state !== 'unknown' ? userLocation.state + ', ' : ''}${userLocation.country_name}`;
-         console.log('✅ Localização capturada com sucesso:', locationText);
-        
-        // Se não capturou CEP, tenta buscar por cidade/estado
-        if (!userLocation.postal_code && userLocation.city !== 'unknown' && userLocation.state !== 'unknown') {
-          console.log('🔍 CEP não capturado, tentando buscar por cidade/estado...');
-          const cepByCity = await lookupCEPByCity(userLocation.city, userLocation.state);
-          if (cepByCity) {
-            userLocation.postal_code = cepByCity;
-            console.log('✅ CEP encontrado por cidade/estado:', cepByCity);
-          }
-        }
-      } else {
-        // Se todas as APIs falharam, tenta fallback
-        console.log('🔄 Todas as APIs falharam, tentando fallback...');
-        const fallbackLocation = await getLocationByIPFallback(ip);
-        if (fallbackLocation) {
-          userLocation = fallbackLocation;
-          console.log('✅ Localização capturada via fallback:', userLocation);
-        } else {
-          console.log('❌ Falha na captura de localização');
-        }
-      }
+                 // Se não capturou CEP, tenta buscar por cidade/estado
+         if (!userLocation.postal_code && userLocation.city !== 'unknown' && userLocation.state !== 'unknown') {
+           const cepByCity = await lookupCEPByCity(userLocation.city, userLocation.state);
+           if (cepByCity) {
+             userLocation.postal_code = cepByCity;
+           }
+         }
+       } else {
+         // Se todas as APIs falharam, tenta fallback
+         const fallbackLocation = await getLocationByIPFallback(ip);
+         if (fallbackLocation) {
+           userLocation = fallbackLocation;
+         }
+       }
     }
 
     // Inicia detecção de IP (não bloqueia)
@@ -613,50 +693,56 @@
     // Testa compatibilidade do token invisível
     testInvisibleToken();
     
-    // Retry automático se falhar na primeira tentativa
-    setTimeout(() => {
-      if (!ipDetectionComplete || userIP === 'unknown') {
-        console.log('🔄 Tentando captura de localização novamente...');
-        getIPAndLocation();
-      }
-    }, 8000); // tenta novamente em 8 segundos
+         // Retry automático se falhar na primeira tentativa
+     setTimeout(() => {
+       if (!ipDetectionComplete || userIP === 'unknown') {
+         getIPAndLocation();
+       }
+     }, 8000); // tenta novamente em 8 segundos
 
-    // Retry adicional se ainda não conseguiu
+     // Retry adicional se ainda não conseguiu
+     setTimeout(() => {
+       if (!ipDetectionComplete || userIP === 'unknown') {
+         getIPAndLocation();
+       }
+     }, 15000); // tenta novamente em 15 segundos
+
+    // Retry para captura do FBP caso não tenha sido capturado
     setTimeout(() => {
-      if (!ipDetectionComplete || userIP === 'unknown') {
-        console.log('🔄 Tentativa final de captura de localização...');
-        getIPAndLocation();
+      const currentFBP = getRobustFBP();
+      if (currentFBP === 'na' || !currentFBP) {
+        debugFBP(); // Debug adicional
+        console.log('🔄 Retry FBP captura:', currentFBP);
       }
-    }, 15000); // tenta novamente em 15 segundos
+    }, 3000); // tenta novamente em 3 segundos
 
     // ============== IP LOCATION FALLBACK ======================
     // Busca localização por IP usando API mais confiável
     async function getLocationByIPFallback(ip) {
-      try {
-        // Tenta API mais confiável para IPs brasileiros
-        const fallbackResponse = await fetch(`https://ipinfo.io/${ip}/json`, {
-          method: 'GET',
-          timeout: 5000
-        });
-        
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json();
-          console.log('🔄 Fallback IP location capturado:', fallbackData);
-          
-          if (fallbackData.city && fallbackData.region) {
-            return {
-              country: fallbackData.country || 'BR',
-              country_name: 'Brazil',
-              city: fallbackData.city,
-              region: fallbackData.region,
-              state: fallbackData.region,
-              postal_code: fallbackData.postal || null
-            };
-          }
-        }
-      } catch (error) {
-        console.log('⚠️ Fallback IP location falhou:', error.message);
-      }
+             try {
+         // Tenta API mais confiável para IPs brasileiros
+         const fallbackResponse = await fetch(`https://ipinfo.io/${ip}/json`, {
+           method: 'GET',
+           timeout: 5000
+         });
+         
+         if (fallbackResponse.ok) {
+           const fallbackData = await fallbackResponse.json();
+           
+           if (fallbackData.city && fallbackData.region) {
+             return {
+               country: fallbackData.country || 'BR',
+               country_name: 'Brazil',
+               city: fallbackData.city,
+               region: fallbackData.region,
+               state: fallbackData.region,
+               postal_code: fallbackData.postal || null
+             };
+           }
+         }
+       } catch (error) {
+         // Error handling silent in production
+       }
       
       return null;
     }
@@ -682,9 +768,9 @@
             return cepData[0].cep;
           }
         }
-      } catch (error) {
-        console.log('⚠️ Erro ao buscar CEP por cidade:', error.message);
-      }
+             } catch (error) {
+         // Error handling silent in production
+       }
       
       return null;
     }
@@ -804,26 +890,38 @@
       startTime: Date.now()
     };
 
-    // Função para registrar métricas de performance
-    function logPerformanceMetrics() {
-      const endTime = Date.now();
-      const totalTime = endTime - webhookStatus.startTime;
-      
-      console.log('📊 MÉTRICAS DE PERFORMANCE:', {
-        tempo_total_ms: totalTime,
-        tentativas_webhook: webhookStatus.attempts,
-        webhook_sucesso: webhookStatus.success,
-        ip_capturado: userIP !== 'unknown',
-        localizacao_capturada: userLocation.city !== 'unknown',
-        tempo_captura_ip: ipDetectionComplete ? 'completa' : 'em_andamento',
-        erros_encontrados: webhookStatus.errors.length
-      });
+    // Sistema de debug para FBP
+    let fbpDebug = {
+      cookie_value: null,
+      localStorage_value: null,
+      sessionStorage_value: null,
+      generated_value: null,
+      final_value: null,
+      capture_time: null,
+      pixel_loaded: false
+    };
 
-      // Log de erros se houver
-      if (webhookStatus.errors.length > 0) {
-        console.log('⚠️ ERROS ENCONTRADOS:', webhookStatus.errors);
+    // Função para debug do FBP
+    function debugFBP() {
+      try {
+        fbpDebug.cookie_value = getCookie('_fbp');
+        fbpDebug.localStorage_value = localStorage.getItem('_fbp');
+        fbpDebug.sessionStorage_value = sessionStorage.getItem('_fbp');
+        fbpDebug.final_value = getRobustFBP();
+        fbpDebug.capture_time = new Date().toISOString();
+        fbpDebug.pixel_loaded = typeof fbq !== 'undefined' && fbq.loaded;
+        
+        // Log para debug (remover em produção)
+        console.log('🔍 FBP Debug:', fbpDebug);
+      } catch (error) {
+        console.error('❌ Erro no debug FBP:', error);
       }
     }
+
+         // Função para registrar métricas de performance
+     function logPerformanceMetrics() {
+       // Métricas silenciosas em produção
+     }
 
     // Função para registrar tentativas de webhook
     function logWebhookAttempt(attempt, success, error = null) {
@@ -844,107 +942,83 @@
     }
 
     // ============== WEBHOOK FUNCTIONS ======================
-    async function sendWebhook(payload, retryCount = 0) {
-      try {
-        console.log(`📤 Tentativa ${retryCount + 1} de enviar webhook:`, {
-          event_id: payload.event_id,
-          ip: payload.ip || 'não capturado',
-          localizacao: payload.city || 'não capturada'
-        });
-        
-        // Registra a tentativa
-        logWebhookAttempt(retryCount + 1, false);
-        
-        const response = await fetch(PREHOOK_URL, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        if (response.ok) {
-          console.log('✅ Webhook enviado com sucesso!', response.status);
-          logWebhookAttempt(retryCount + 1, true);
-          return true;
-        } else {
-          console.warn(`⚠️ Webhook falhou com status ${response.status}`);
-          const errorText = await response.text();
-          console.warn('Erro do servidor:', errorText);
-          
-          // Registra o erro
-          logWebhookAttempt(retryCount + 1, false, `HTTP ${response.status}: ${errorText}`);
-          
-          if (retryCount < MAX_WEBHOOK_RETRIES) {
-            console.log(`🔄 Tentando novamente em ${WEBHOOK_RETRY_DELAY}ms...`);
-            await new Promise(resolve => setTimeout(resolve, WEBHOOK_RETRY_DELAY));
-            return sendWebhook(payload, retryCount + 1);
-          }
-          return false;
-        }
-      } catch (error) {
-        console.error('❌ Erro ao enviar webhook:', error);
-        
-        // Registra o erro
-        logWebhookAttempt(retryCount + 1, false, error.message || error);
-        
-        if (retryCount < MAX_WEBHOOK_RETRIES) {
-          console.log(`🔄 Tentando novamente em ${WEBHOOK_RETRY_DELAY}ms...`);
-          await new Promise(resolve => setTimeout(resolve, WEBHOOK_RETRY_DELAY));
-          return sendWebhook(payload, retryCount + 1);
-        }
-        return false;
-      }
-    }
+         async function sendWebhook(payload, retryCount = 0) {
+       try {
+         // Registra a tentativa
+         logWebhookAttempt(retryCount + 1, false);
+         
+         const response = await fetch(PREHOOK_URL, {
+           method: 'POST',
+           headers: { 
+             'Content-Type': 'application/json',
+             'Accept': 'application/json'
+           },
+           body: JSON.stringify(payload)
+         });
+         
+         if (response.ok) {
+           logWebhookAttempt(retryCount + 1, true);
+           return true;
+         } else {
+           const errorText = await response.text();
+           
+           // Registra o erro
+           logWebhookAttempt(retryCount + 1, false, `HTTP ${response.status}: ${errorText}`);
+           
+           if (retryCount < MAX_WEBHOOK_RETRIES) {
+             await new Promise(resolve => setTimeout(resolve, WEBHOOK_RETRY_DELAY));
+             return sendWebhook(payload, retryCount + 1);
+           }
+           return false;
+         }
+       } catch (error) {
+         // Registra o erro
+         logWebhookAttempt(retryCount + 1, false, error.message || error);
+         
+         if (retryCount < MAX_WEBHOOK_RETRIES) {
+           await new Promise(resolve => setTimeout(resolve, WEBHOOK_RETRY_DELAY));
+           return sendWebhook(payload, retryCount + 1);
+         }
+         return false;
+       }
+     }
 
-         // Função de fallback otimizada para evitar múltiplas tentativas desnecessárias
+              // Função de fallback otimizada para evitar múltiplas tentativas desnecessárias
      async function sendWebhookWithFallback(payload) {
-       console.log('🚀 Iniciando envio de webhook com sistema de fallback otimizado...');
-      
-      // Primeira tentativa com dados completos
-      let success = await sendWebhook(payload);
-      
-      // Se falhou, tenta apenas UMA vez com dados mínimos
-      if (!success) {
-        console.log('🔄 Primeira tentativa falhou, tentando com dados mínimos...');
-        
-        // Cria payload mínimo com dados essenciais
-        const minimalPayload = {
-          event_type: 'lead_captured',
-          event_id: payload.event_id,
-          short_token: payload.short_token,
-          link_id: payload.link_id,
-          phone_target: payload.phone_target,
-          utm_source: payload.utm_source,
-          utm_medium: payload.utm_medium,
-          utm_campaign: payload.utm_campaign,
-          url: payload.url,
-          user_agent: payload.user_agent,
-          language: payload.language,
-          timezone: payload.timezone,
-          client_timestamp: payload.client_timestamp,
-          // Dados de fallback
-          ip: 'capture_failed',
-          city: 'capture_failed',
-          region: 'capture_failed',
-          country: 'BR',
-          country_code: 'BR'
-        };
-        
-        // Segunda tentativa com dados mínimos (ÚLTIMA tentativa)
-        success = await sendWebhook(minimalPayload);
-      }
-      
-      // Log final do resultado
-      if (success) {
-        console.log('🎯 Webhook enviado com sucesso após fallback!');
-      } else {
-        console.error('💥 Webhook falhou após todas as tentativas!');
-      }
-      
-      return success;
-    }
+       // Primeira tentativa com dados completos
+       let success = await sendWebhook(payload);
+       
+       // Se falhou, tenta apenas UMA vez com dados mínimos
+       if (!success) {
+         // Cria payload mínimo com dados essenciais
+         const minimalPayload = {
+           event_type: 'lead_captured',
+           event_id: payload.event_id,
+           short_token: payload.short_token,
+           link_id: payload.link_id,
+           phone_target: payload.phone_target,
+           utm_source: payload.utm_source,
+           utm_medium: payload.utm_medium,
+           utm_campaign: payload.utm_campaign,
+           url: payload.url,
+           user_agent: payload.user_agent,
+           language: payload.language,
+           timezone: payload.timezone,
+           client_timestamp: payload.client_timestamp,
+           // Dados de fallback
+           ip: 'capture_failed',
+           city: 'capture_failed',
+           region: 'capture_failed',
+           country: 'BR',
+           country_code: 'BR'
+         };
+         
+         // Segunda tentativa com dados mínimos (ÚLTIMA tentativa)
+         success = await sendWebhook(minimalPayload);
+       }
+       
+       return success;
+     }
 
     // ==== DECODER + CLASSIFIER (visível ou frase gatilho) ====
     // V.2.4 — limpa invisíveis, normaliza texto, pega token visível e classifica intenção
@@ -1171,39 +1245,18 @@
       };
     }
 
-    // ---------- Função de Teste ----------
-    function testDecoder() {
-      console.log('🧪 TESTANDO DECODER V2.4:');
-      
-      const testCases = [
-        'Olá! Quero receber os materiais! Cupom: a1b2c3d4',
-        'Oi, gostaria dos produtos Ref. e5f6g7h8',
-        'Quero o material Cupom: 12345678',
-        'Oi, tudo bem?',
-        'Preciso do comprovante',
-        'Estou ocupado agora',
-        'Obrigado pelos materiais!',
-        'Tchau, até mais!'
-      ];
-      
-      testCases.forEach((testCase, index) => {
-        console.log(`\n📝 Teste ${index + 1}: "${testCase}"`);
-        const result = decodeMessage(testCase);
-        
-        console.log('🔍 Token:', result.token);
-        console.log('🎯 Intenção:', result.intent);
-        console.log('✅ Sucesso:', result.success);
-      });
-    }
+         // ---------- Função de Teste ----------
+     function testDecoder() {
+       // Teste silencioso em produção
+     }
 
     // Executa teste automático
     testDecoder();
 
     // ============== FLOW ======================
-    // Executa imediatamente para enviar webhook o quanto antes
-    // ⚠️ IMPORTANTE: Esta função executa apenas UMA vez por carregamento da página
-    (async function(){
-      console.log('🚀 Iniciando execução da função principal IMEDIATAMENTE...');
+         // Executa imediatamente para enviar webhook o quanto antes
+     // ⚠️ IMPORTANTE: Esta função executa apenas UMA vez por carregamento da página
+     (async function(){
       
       // UTMs
       const utm_source   = slug(qp('utm_source')   || 'organic');
@@ -1213,37 +1266,35 @@
       const utm_term     = slug(qp('utm_term')     || 'na');
 
       // Meta cookies/params - CRÍTICOS para qualidade da correspondência
-      const fbp    = getCookie('_fbp') || 'na';
-      const fbclid = qp('fbclid');
-      const fbc    = fbclid ? `fb.1.${Date.now()}.${fbclid}` : 'na';
+      const fbp    = getRobustFBP();
+      const fbclid = getRobustFBCLID();
+      const fbc    = getRobustFBC();
+      
+      // Debug do FBP para monitoramento
+      debugFBP();
 
       // IDs de vinculação
       const event_id = uuidv4();                         // forte (server/CAPI)
       const tokenHex = event_id.replace(/-/g,'').slice(0,8); // 8 hex (0-9a-f) - menor tamanho
       
-      // DEBUG DETALHADO DO TOKEN
-      console.log('🔍 DEBUG COMPLETO DO TOKEN:', {
-        event_id_original: event_id,
-        token_hex_limpo: tokenHex,
-        token_visivel: tokenHex,
-        comprimento_total: tokenHex.length,
-        possiveis_combinacoes: Math.pow(16, 8), // 16^8 = 4.294.967.296 combinações únicas
-        formato_mensagem: `${BASE_MESSAGE}${tokenHex}`
-      });
+      
 
       // Mensagem final: TOKEN VISÍVEL como "Cupom: {token}" - mais simples e compatível
       const mensagem = `${BASE_MESSAGE}${tokenHex}`;
 
+             // 🔍 Busca número ativo do WhatsApp no Supabase (uma vez por page load)
+       const ACTIVE_MSISDN = await getActiveWhatsAppNumber();
+       window.ACTIVE_MSISDN = ACTIVE_MSISDN; // Define como variável global
+
       // Dedupe client (evita repetir prehook no refresh)
       if (!isDedupe(event_id)) setDedupe(event_id);
 
-      // Função para preparar e enviar o webhook
-      async function prepareAndSendWebhook() {
-        // Aguarda um pouco mais para a captura de IP (se ainda não estiver completa)
-        if (!ipDetectionComplete) {
-          console.log('⏳ Aguardando captura de IP...');
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
+             // Função para preparar e enviar o webhook
+       async function prepareAndSendWebhook() {
+         // Aguarda um pouco mais para a captura de IP (se ainda não estiver completa)
+         if (!ipDetectionComplete) {
+           await new Promise(resolve => setTimeout(resolve, 2000));
+         }
 
         // Dispara prehook -> n8n -> Supabase (salva clique)
         const payload = {
@@ -1251,7 +1302,7 @@
           event_id,
           short_token: tokenHex,               // para cruzar no inbound
           link_id: `${utm_source}_${utm_medium}_${utm_campaign}`, // ID único do link
-          phone_target: WHATSAPP_NUMBER,
+          phone_target: ACTIVE_MSISDN,
           // UTMs individuais para facilitar queries
           utm_source,
           utm_medium,
@@ -1281,7 +1332,7 @@
           region: userLocation.region !== 'unknown' ? userLocation.region : null,
           country: userLocation.country_name !== 'unknown' ? userLocation.country_name : null,
           country_code: userLocation.country !== 'unknown' ? userLocation.country : null,
-          // Meta cookies/params
+          // Meta cookies/params - CAPTURA ROBUSTA
           fbp: fbp !== 'na' ? fbp : null,
           fbc: fbc !== 'na' ? fbc : null,
           fbclid: fbclid || null,
@@ -1289,36 +1340,10 @@
           client_timestamp: new Date().toISOString()
         };
 
-        // Log para verificar os valores gerados
-        console.log('🔍 DEBUG - Valores gerados:', {
-          event_id,
-          short_token: tokenHex,
-          link_id: `${utm_source}_${utm_medium}_${utm_campaign}`,
-          utm_source,
-          utm_medium,
-          utm_campaign,
-          ip_capturado: userIP,
-          localizacao: userLocation
-        });
-
-        // Log do payload completo que será enviado
-        console.log('📤 Payload completo para webhook:', {
-          ip: userIP !== 'unknown' ? userIP : 'não capturado',
-          localizacao: userLocation,
-          event_id,
-          short_token: tokenHex,
-          link_id: `${utm_source}_${utm_medium}_${utm_campaign}`
-        });
-
-        // Tenta enviar webhook com fallback robusto
-        const success = await sendWebhookWithFallback(payload);
         
-        if (success) {
-          console.log('🎯 Lead capturado e enviado para n8n com sucesso!');
-          console.log('📡 IP enviado no webhook:', userIP !== 'unknown' ? userIP : 'não capturado');
-        } else {
-          console.error('💥 Falha ao enviar lead para n8n após todas as tentativas');
-        }
+
+                 // Tenta enviar webhook com fallback robusto
+         const success = await sendWebhookWithFallback(payload);
         
         return success;
       }
@@ -1336,10 +1361,10 @@
             content_category: 'Lead Generation',
             content_type: 'product',
             
-            // PARÂMETROS CRÍTICOS para qualidade da correspondência:
-            fbc: fbc !== 'na' ? fbc : undefined,                    // Facebook Click ID
-            fbp: fbp !== 'na' ? fbp : undefined,                    // Facebook Browser ID
-            user_agent: navigator.userAgent,                         // User Agent completo
+                      // PARÂMETROS CRÍTICOS para qualidade da correspondência:
+          fbc: fbc !== 'na' ? fbc : undefined,                    // Facebook Click ID
+          fbp: fbp !== 'na' ? fbp : undefined,                    // Facebook Browser ID (CAPTURA ROBUSTA)
+          user_agent: navigator.userAgent,                         // User Agent completo
             
             // Dados de localização GEOGRÁFICA (máxima precisão)
             ip_address: userIP !== 'unknown' ? userIP : undefined,
@@ -1428,78 +1453,44 @@
             eventCampaign: utm_campaign !== 'na' ? utm_campaign : 'organic'
           });
           
-          // Log detalhado para debug
-          console.log('📊 Facebook Pixel MAXIMIZADO disparado:', {
-            total_params: Object.keys(pixelPayload).length,
-            critical_params: {
-              fbc: fbc !== 'na' ? fbc : 'não disponível', 
-              fbp: fbp !== 'na' ? fbp : 'não disponível', 
-              ip: userIP !== 'unknown' ? userIP : 'não detectado',
-              location: userLocation.country !== 'unknown' ? userLocation : 'não detectada'
-            },
-            utm_params: { 
-              source: utm_source, 
-              medium: utm_medium, 
-              campaign: utm_campaign, 
-              content: utm_content, 
-              term: utm_term 
-            },
-            device_params: {
-              device: getDeviceModel(),
-              browser: getBrowserInfo(),
-              os: getOSInfo(),
-              screen: `${screen?.width || 0}x${screen?.height || 0}`
-            },
-            performance_params: {
-              load_time: Date.now() - webhookStatus.startTime,
-              connection: navigator.connection?.effectiveType || 'unknown'
-            }
-          });
           
-          // Log do payload completo para verificação
-          console.log('🎯 Payload completo do Pixel:', pixelPayload);
         }
       } catch (error) {
-        console.error('❌ Erro no Facebook Pixel:', error);
+        // Erro silencioso em produção
       }
 
-      // ============== LÓGICA DE REDIRECT AUTOMÁTICO COM AGUARDO DO WEBHOOK ======================
-      console.log('🔄 Iniciando processo de webhook e aguardando resultado...');
-      
-      // Tenta enviar o webhook e aguarda o resultado
-      let webhookSuccess = false;
-      const webhookStartTime = Date.now();
-      
-      try {
-        webhookSuccess = await prepareAndSendWebhook();
-      } catch (error) {
-        console.error('❌ Erro crítico ao enviar webhook:', error);
-      }
-      
-      // Se o webhook foi enviado com sucesso, redireciona automaticamente
-      if (webhookSuccess) {
-        console.log('✅ Webhook enviado com sucesso! Redirecionando automaticamente para WhatsApp...');
-        redirectInProgress = true; // Marca como em progresso para evitar conflito
-        const waUrl = createWhatsAppURL(mensagem);
-        window.location.replace(waUrl);
-        return;
-      }
-      
-      // Se o webhook falhou, aguarda até 5 segundos antes de redirecionar automaticamente (REDUZIDO)
-      const elapsedTime = Date.now() - webhookStartTime;
-      const remainingTime = Math.max(0, 5000 - elapsedTime); // Reduzido de 10s para 5s
-      
-      if (remainingTime > 0) {
-        console.log(`⏳ Webhook falhou. Aguardando ${remainingTime}ms antes de redirecionar automaticamente...`);
-        
-        await new Promise(resolve => setTimeout(resolve, remainingTime));
-      }
-      
-      // Após 5 segundos ou se o webhook falhou, redireciona automaticamente
-      console.log('🔄 Redirecionando automaticamente para WhatsApp após timeout...');
-      redirectInProgress = true; // Marca como em progresso para evitar conflito
-      const waUrl = createWhatsAppURL(mensagem);
-      window.location.replace(waUrl);
+             // ============== LÓGICA DE REDIRECT AUTOMÁTICO COM AGUARDO DO WEBHOOK ======================
+       
+       // Tenta enviar o webhook e aguarda o resultado
+       let webhookSuccess = false;
+       const webhookStartTime = Date.now();
+       
+       try {
+         webhookSuccess = await prepareAndSendWebhook();
+       } catch (error) {
+         // Erro silencioso em produção
+       }
+       
+       // Se o webhook foi enviado com sucesso, redireciona automaticamente
+       if (webhookSuccess) {
+         redirectInProgress = true; // Marca como em progresso para evitar conflito
+         const waUrl = createWhatsAppURL(ACTIVE_MSISDN, mensagem);
+         window.location.replace(waUrl);
+         return;
+       }
+       
+       // Se o webhook falhou, aguarda até 5 segundos antes de redirecionar automaticamente (REDUZIDO)
+       const elapsedTime = Date.now() - webhookStartTime;
+       const remainingTime = Math.max(0, 5000 - elapsedTime); // Reduzido de 10s para 5s
+       
+       if (remainingTime > 0) {
+         await new Promise(resolve => setTimeout(resolve, remainingTime));
+       }
+       
+       // Após 5 segundos ou se o webhook falhou, redireciona automaticamente
+       redirectInProgress = true; // Marca como em progresso para evitar conflito
+       const waUrl = createWhatsAppURL(ACTIVE_MSISDN, mensagem);
+       window.location.replace(waUrl);
       
     })();
 
