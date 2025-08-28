@@ -1492,42 +1492,45 @@
         console.error('❌ Erro no Facebook Pixel:', error);
       }
 
-// ============== NOVA LÓGICA DE REDIRECT v2: VELOCIDADE PRIMEIRO (CORRIGIDO) ======================
-      console.log('🚀 Iniciando envio de webhook em paralelo e preparando redirect...');
-      prepareAndSendWebhook(); // Dispara o webhook, mas NÃO espera por ele.
-
-      // CRIA A URL DO WHATSAPP IMEDIATAMENTE, fora do setTimeout
-      const waUrl = createWhatsAppURL(mensagem); 
-
-      const REDIRECT_SPEED_DELAY = 1200; // Apenas 1.2 segundos de espera.
-      console.log(`🔄 Redirecionamento rápido agendado para ${REDIRECT_SPEED_DELAY}ms...`);
-
-      // Agenda a execução do redirecionamento
-      setTimeout(() => {
-          if (!redirectInProgress) {
-              redirectInProgress = true;
-              console.log('Executando redirect para:', waUrl);
-              window.location.replace(waUrl); // Agora apenas executa o redirect
-          }
-      }, REDIRECT_SPEED_DELAY);
+// ============== LÓGICA DE REDIRECT AUTOMÁTICO COM AGUARDO DO WEBHOOK (VERSÃO ANTIGA E ESTÁVEL) ======================
+      console.log('🔄 Iniciando processo de webhook e aguardando resultado...');
+      
+      // Tenta enviar o webhook e aguarda o resultado
+      let webhookSuccess = false;
+      const webhookStartTime = Date.now();
+      
+      try {
+        webhookSuccess = await prepareAndSendWebhook();
+      } catch (error) {
+        console.error('❌ Erro crítico ao enviar webhook:', error);
+      }
+      
+      // Se o webhook foi enviado com sucesso, redireciona imediatamente
+      if (webhookSuccess) {
+        console.log('✅ Webhook enviado com sucesso! Redirecionando para WhatsApp...');
+        redirectInProgress = true; // Marca como em progresso para evitar conflito
+        const waUrl = createWhatsAppURL(mensagem);
+        window.location.replace(waUrl);
         return;
       }
       
-      // Se o webhook falhou, aguarda até 5 segundos antes de redirecionar automaticamente (REDUZIDO)
+      // Se o webhook falhou, usa o REDIRECT_DELAY como fallback
       const elapsedTime = Date.now() - webhookStartTime;
-      const remainingTime = Math.max(0, 5000 - elapsedTime); // Reduzido de 10s para 5s
+      const remainingTime = Math.max(0, REDIRECT_DELAY - elapsedTime);
       
       if (remainingTime > 0) {
-        console.log(`⏳ Webhook falhou. Aguardando ${remainingTime}ms antes de redirecionar automaticamente...`);
+        console.log(`⏳ Webhook falhou. Aguardando ${remainingTime}ms antes de redirecionar...`);
         
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
       
-      // Após 5 segundos ou se o webhook falhou, redireciona automaticamente
-      console.log('🔄 Redirecionando automaticamente para WhatsApp após timeout...');
-      redirectInProgress = true; // Marca como em progresso para evitar conflito
-      const waUrl = createWhatsAppURL(mensagem);
-      window.location.replace(waUrl);
+      // Após o tempo ou se o webhook falhou, redireciona
+      console.log('🔄 Redirecionando para WhatsApp após timeout de fallback...');
+      if (!redirectInProgress) {
+        redirectInProgress = true; // Marca como em progresso para evitar conflito
+        const waUrl = createWhatsAppURL(mensagem);
+        window.location.replace(waUrl);
+      }
       
     })();
 
