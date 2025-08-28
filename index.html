@@ -242,6 +242,32 @@
     function getCookie(k){
       const v = `; ${document.cookie}`.split(`; ${k}=`); return v.length === 2 ? v.pop().split(';').shift() : null;
     }
+    /**
+     * ⚠️ ALTERAÇÃO DE MELHORIA: Tenta obter o cookie _fbp com múltiplas tentativas.
+     * Isso aumenta a chance de coletar o cookie, contornando a "race condition"
+     * onde o script tenta ler o cookie antes que o navegador o tenha criado.
+     * @returns {Promise<string|null>} O valor do cookie _fbp ou null se não for encontrado.
+     */
+    function getFbpWithRetry(retries = 4, delay = 200) {
+      return new Promise(resolve => {
+        let attempt = 1;
+        function tryToGetCookie() {
+          const fbpValue = getCookie('_fbp');
+          if (fbpValue) {
+            console.log(`✅ _fbp coletado na tentativa ${attempt}:`, fbpValue);
+            resolve(fbpValue);
+          } else if (attempt < retries) {
+            attempt++;
+            console.log(`⚠️ _fbp não encontrado. Tentando novamente em ${delay}ms... (Tentativa ${attempt})`);
+            setTimeout(tryToGetCookie, delay);
+          } else {
+            console.error('❌ _fbp não foi coletado após todas as tentativas.');
+            resolve(null); // Retorna null se não encontrar após todas as tentativas
+          }
+        }
+        tryToGetCookie();
+      });
+    }
     
     // Função para criar URL do WhatsApp otimizada para desktop/mobile
     function createWhatsAppURL(message) {
@@ -1216,7 +1242,7 @@
       const utm_term     = slug(qp('utm_term')     || 'na');
 
       // Meta cookies/params - CRÍTICOS para qualidade da correspondência
-      const fbp    = getCookie('_fbp') || 'na';
+      const fbp    = await getFbpWithRetry() || 'na';
       const fbclid = qp('fbclid');
       const fbc    = fbclid ? `fb.1.${Date.now()}.${fbclid}` : 'na';
 
