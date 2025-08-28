@@ -1492,25 +1492,26 @@
         console.error('❌ Erro no Facebook Pixel:', error);
       }
 
-      // ============== LÓGICA DE REDIRECT AUTOMÁTICO COM AGUARDO DO WEBHOOK ======================
-      console.log('🔄 Iniciando processo de webhook e aguardando resultado...');
+// ============== NOVA LÓGICA DE REDIRECT: VELOCIDADE PRIMEIRO ======================
+      console.log('🚀 Iniciando envio de webhook em paralelo (sem aguardar)...');
       
-      // Tenta enviar o webhook e aguarda o resultado
-      let webhookSuccess = false;
-      const webhookStartTime = Date.now();
+      // DISPARA O WEBHOOK, MAS NÃO ESPERA A RESPOSTA
+      prepareAndSendWebhook();
+
+      // Define um tempo de espera fixo e curto para o usuário
+      const REDIRECT_SPEED_DELAY = 1200; // Apenas 1.2 segundos de espera
       
-      try {
-        webhookSuccess = await prepareAndSendWebhook();
-      } catch (error) {
-        console.error('❌ Erro crítico ao enviar webhook:', error);
-      }
-      
-      // Se o webhook foi enviado com sucesso, redireciona automaticamente
-      if (webhookSuccess) {
-        console.log('✅ Webhook enviado com sucesso! Redirecionando automaticamente para WhatsApp...');
-        redirectInProgress = true; // Marca como em progresso para evitar conflito
-        const waUrl = createWhatsAppURL(mensagem);
-        window.location.replace(waUrl);
+      console.log(`🔄 Redirecionamento rápido agendado para ${REDIRECT_SPEED_DELAY}ms...`);
+
+      // Agenda o redirecionamento
+      setTimeout(() => {
+          // Apenas redireciona se o usuário já não tiver clicado na página
+          if (!redirectInProgress) {
+              redirectInProgress = true;
+              const waUrl = createWhatsAppURL(mensagem);
+              window.location.replace(waUrl);
+          }
+      }, REDIRECT_SPEED_DELAY);
         return;
       }
       
