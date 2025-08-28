@@ -1492,24 +1492,22 @@
         console.error('❌ Erro no Facebook Pixel:', error);
       }
 
-// ============== NOVA LÓGICA DE REDIRECT: VELOCIDADE PRIMEIRO ======================
-      console.log('🚀 Iniciando envio de webhook em paralelo (sem aguardar)...');
-      
-      // DISPARA O WEBHOOK, MAS NÃO ESPERA A RESPOSTA
-      prepareAndSendWebhook();
+// ============== NOVA LÓGICA DE REDIRECT v2: VELOCIDADE PRIMEIRO (CORRIGIDO) ======================
+      console.log('🚀 Iniciando envio de webhook em paralelo e preparando redirect...');
+      prepareAndSendWebhook(); // Dispara o webhook, mas NÃO espera por ele.
 
-      // Define um tempo de espera fixo e curto para o usuário
-      const REDIRECT_SPEED_DELAY = 1200; // Apenas 1.2 segundos de espera
-      
+      // CRIA A URL DO WHATSAPP IMEDIATAMENTE, fora do setTimeout
+      const waUrl = createWhatsAppURL(mensagem); 
+
+      const REDIRECT_SPEED_DELAY = 1200; // Apenas 1.2 segundos de espera.
       console.log(`🔄 Redirecionamento rápido agendado para ${REDIRECT_SPEED_DELAY}ms...`);
 
-      // Agenda o redirecionamento
+      // Agenda a execução do redirecionamento
       setTimeout(() => {
-          // Apenas redireciona se o usuário já não tiver clicado na página
           if (!redirectInProgress) {
               redirectInProgress = true;
-              const waUrl = createWhatsAppURL(mensagem);
-              window.location.replace(waUrl);
+              console.log('Executando redirect para:', waUrl);
+              window.location.replace(waUrl); // Agora apenas executa o redirect
           }
       }, REDIRECT_SPEED_DELAY);
         return;
