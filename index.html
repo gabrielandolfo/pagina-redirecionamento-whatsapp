@@ -131,14 +131,15 @@
       <div class="loading-dot"></div>
       <div class="loading-dot"></div>
     </div>
-    Aguarde...
+    Carregando...
   </div>
   
-<div class="redirect-text">
-    Abrindo Whatsapp
+  <div class="redirect-text">
+    Estamos abrindo o WhatsApp
   </div>
+  
   <div class="click-hint">
-    Isso leva só 2 segundos!
+    Isso leva só 3 segundos!
   </div>
 
   <script>
@@ -222,10 +223,10 @@
     const PREHOOK_URL     = 'https://webhook.servidorrrdigital.site/webhook/redirect'; // URL do seu webhook n8n
     
     // ⚙️ CONFIGURAÇÕES AVANÇADAS (altere apenas se necessário)
-    const REDIRECT_DELAY  = 100; // ms - delay antes do redirect automático
+    const REDIRECT_DELAY  = 3000; // ms - delay antes do redirect automático
     const DEDUPE_TTL_MS   = 5 * 60 * 1000; // 5 min - tempo para evitar duplicatas
     const WEBHOOK_RETRY_DELAY = 2000; // ms entre tentativas de webhook
-    const MAX_WEBHOOK_RETRIES = 5; // máximo de tentativas de webhook
+    const MAX_WEBHOOK_RETRIES = 2; // máximo de tentativas de webhook
     const IP_TIMEOUT = 8000; // timeout para APIs de IP
     const GEO_TIMEOUT = 10000; // timeout para APIs de geolocalização
 
@@ -241,32 +242,6 @@
      const qp = (n)=> new URLSearchParams(location.search).get(n);
     function getCookie(k){
       const v = `; ${document.cookie}`.split(`; ${k}=`); return v.length === 2 ? v.pop().split(';').shift() : null;
-    }
-    /**
-     * ⚠️ ALTERAÇÃO DE MELHORIA: Tenta obter o cookie _fbp com múltiplas tentativas.
-     * Isso aumenta a chance de coletar o cookie, contornando a "race condition"
-     * onde o script tenta ler o cookie antes que o navegador o tenha criado.
-     * @returns {Promise<string|null>} O valor do cookie _fbp ou null se não for encontrado.
-     */
-    function getFbpWithRetry(retries = 4, delay = 200) {
-      return new Promise(resolve => {
-        let attempt = 1;
-        function tryToGetCookie() {
-          const fbpValue = getCookie('_fbp');
-          if (fbpValue) {
-            console.log(`✅ _fbp coletado na tentativa ${attempt}:`, fbpValue);
-            resolve(fbpValue);
-          } else if (attempt < retries) {
-            attempt++;
-            console.log(`⚠️ _fbp não encontrado. Tentando novamente em ${delay}ms... (Tentativa ${attempt})`);
-            setTimeout(tryToGetCookie, delay);
-          } else {
-            console.error('❌ _fbp não foi coletado após todas as tentativas.');
-            resolve(null); // Retorna null se não encontrar após todas as tentativas
-          }
-        }
-        tryToGetCookie();
-      });
     }
     
     // Função para criar URL do WhatsApp otimizada para desktop/mobile
@@ -1242,7 +1217,7 @@
       const utm_term     = slug(qp('utm_term')     || 'na');
 
       // Meta cookies/params - CRÍTICOS para qualidade da correspondência
-      const fbp    = await getFbpWithRetry() || 'na';
+      const fbp    = getCookie('_fbp') || 'na';
       const fbclid = qp('fbclid');
       const fbc    = fbclid ? `fb.1.${Date.now()}.${fbclid}` : 'na';
 
@@ -1492,7 +1467,7 @@
         console.error('❌ Erro no Facebook Pixel:', error);
       }
 
-// ============== LÓGICA DE REDIRECT AUTOMÁTICO COM AGUARDO DO WEBHOOK (VERSÃO ANTIGA E ESTÁVEL) ======================
+      // ============== LÓGICA DE REDIRECT AUTOMÁTICO COM AGUARDO DO WEBHOOK ======================
       console.log('🔄 Iniciando processo de webhook e aguardando resultado...');
       
       // Tenta enviar o webhook e aguarda o resultado
@@ -1505,32 +1480,30 @@
         console.error('❌ Erro crítico ao enviar webhook:', error);
       }
       
-      // Se o webhook foi enviado com sucesso, redireciona imediatamente
+      // Se o webhook foi enviado com sucesso, redireciona automaticamente
       if (webhookSuccess) {
-        console.log('✅ Webhook enviado com sucesso! Redirecionando para WhatsApp...');
+        console.log('✅ Webhook enviado com sucesso! Redirecionando automaticamente para WhatsApp...');
         redirectInProgress = true; // Marca como em progresso para evitar conflito
         const waUrl = createWhatsAppURL(mensagem);
         window.location.replace(waUrl);
         return;
       }
       
-      // Se o webhook falhou, usa o REDIRECT_DELAY como fallback
+      // Se o webhook falhou, aguarda até 5 segundos antes de redirecionar automaticamente (REDUZIDO)
       const elapsedTime = Date.now() - webhookStartTime;
-      const remainingTime = Math.max(0, REDIRECT_DELAY - elapsedTime);
+      const remainingTime = Math.max(0, 5000 - elapsedTime); // Reduzido de 10s para 5s
       
       if (remainingTime > 0) {
-        console.log(`⏳ Webhook falhou. Aguardando ${remainingTime}ms antes de redirecionar...`);
+        console.log(`⏳ Webhook falhou. Aguardando ${remainingTime}ms antes de redirecionar automaticamente...`);
         
         await new Promise(resolve => setTimeout(resolve, remainingTime));
       }
       
-      // Após o tempo ou se o webhook falhou, redireciona
-      console.log('🔄 Redirecionando para WhatsApp após timeout de fallback...');
-      if (!redirectInProgress) {
-        redirectInProgress = true; // Marca como em progresso para evitar conflito
-        const waUrl = createWhatsAppURL(mensagem);
-        window.location.replace(waUrl);
-      }
+      // Após 5 segundos ou se o webhook falhou, redireciona automaticamente
+      console.log('🔄 Redirecionando automaticamente para WhatsApp após timeout...');
+      redirectInProgress = true; // Marca como em progresso para evitar conflito
+      const waUrl = createWhatsAppURL(mensagem);
+      window.location.replace(waUrl);
       
     })();
 
