@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Redirecionando...</title>
 
-  <!-- Configurações diretas no HTML -->
-
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -34,7 +32,7 @@
     Carregando...
   </div>
   <div class="redirect-text">Estamos abrindo o WhatsApp</div>
-  <div class="click-hint">Isso leva só 3 segundos!</div>
+  <div class="click-hint">Isso leva só 2 segundos!</div>
 
   <script>
     // ======== CONFIGURAÇÕES DIRETAS ========
@@ -43,84 +41,50 @@
     const BASE_MESSAGE = 'Olá! Quero receber os materiais! Cupom: ';
     const PREHOOK_URL = 'https://webhook.servidorrrdigital.site/webhook/redirect';
     
-    // Configurações avançadas
-    const REDIRECT_DELAY = 3000; // 3 segundos para teste
-    const WEBHOOK_RETRY_DELAY = 2000;
-    const MAX_WEBHOOK_RETRIES = 5;
+    // ======== PARÂMETROS DE TEMPO (HARD DEADLINE) ========
+    const REDIRECT_DEADLINE_MS = 2000; // 2s fixos, independentemente de qualquer outra coisa
+    const WEBHOOK_BUDGET_MS = 1200;    // janela máxima para tentar o webhook antes do redirect
+    const WEBHOOK_RETRY_DELAY = 250;   // pequenos retries dentro do orçamento
+    const MAX_WEBHOOK_RETRIES = 3;
     const DEDUPE_TTL_MS = 10 * 60 * 1000; // 10 minutos
-    
+
     // ======== PIXEL META BASE ========
-    // Limpa qualquer pixel existente para evitar duplicação
     if (window.fbq) {
-      console.log('🧹 Limpando pixel existente');
-      delete window.fbq;
-      delete window._fbq;
+      try { delete window.fbq; delete window._fbq; } catch {}
     }
-    
-    // Carrega o pixel apenas quando DOM estiver pronto
-    document.addEventListener('DOMContentLoaded', function() {
-      // Verifica se já existe um pixel carregado
-      if (typeof fbq === 'undefined' && !window.fbq) {
-        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){
-        n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-        n.queue=[];t=b.createElement(e);t.async=!0;
-        t.src=v;s=b.getElementsByTagName(e)[0];
-        s.parentNode.insertBefore(t,s)}(window, document,'script',
-        'https://connect.facebook.net/en_US/fbevents.js');
-        console.log('✅ Pixel base carregado');
-        
-        // Inicializa o pixel após carregar
-        setTimeout(() => {
-          if (typeof fbq !== 'undefined' && !window.pixelInitialized) {
-            fbq('init', META_PIXEL_ID);
-            window.pixelInitialized = true;
-            console.log('✅ Pixel iniciado com ID:', META_PIXEL_ID);
-            
-            // Adiciona noscript após pixel estar pronto
-            const noscript = document.createElement('noscript');
-            const img = document.createElement('img');
-            img.height = 1;
-            img.width = 1;
-            img.style.display = 'none';
-            img.src = `https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`;
-            noscript.appendChild(img);
-            document.head.appendChild(noscript);
-            console.log('✅ Noscript adicionado');
-          } else {
-            console.log('⚠️ Pixel já inicializado ou não disponível');
-          }
-        }, 100);
-      } else {
-        console.log('⚠️ Pixel já existe, pulando inicialização');
+    // Carrega o script do pixel sem bloquear o fluxo
+    (function(){
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){
+      n.callMethod? n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+    })();
+
+    function initPixelOnce(){
+      if (typeof fbq !== 'undefined' && !window.pixelInitialized) {
+        try {
+          fbq('init', META_PIXEL_ID);
+          window.pixelInitialized = true;
+          const noscript = document.createElement('noscript');
+          const img = document.createElement('img');
+          img.height = 1; img.width = 1; img.style.display = 'none';
+          img.src = `https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1`;
+          noscript.appendChild(img);
+          document.head.appendChild(noscript);
+        } catch {}
       }
-    });
-    
-    // Log das configurações
-    console.log('⚙️ Configurações carregadas:', {
-      META_PIXEL_ID,
-      WHATSAPP_NUMBER,
-      PREHOOK_URL,
-      REDIRECT_DELAY,
-      MAX_WEBHOOK_RETRIES
-    });
-
-    // ======== Pixel init ========
-    // Pixel será inicializado após carregar o script base
-
-    // Noscript será adicionado após o pixel estar pronto
+    }
 
     // ======== Utils ========
     const qp = (n) => new URLSearchParams(location.search).get(n);
-
     function getCookie(name){
       try {
-        return document.cookie
-          .split('; ')
-          .find(row => row.startsWith(name + '='))?.split('=')[1] || null;
+        return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1] || null;
       } catch { return null; }
     }
-
     function uuidv4(){
       return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
         const r = crypto.getRandomValues(new Uint8Array(1))[0] & 15;
@@ -128,20 +92,13 @@
         return v.toString(16);
       });
     }
-
     function createWhatsAppURL(message) {
-      const url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(message)}`;
-      console.log('➡️ WA URL:', url);
-      return url;
+      return `https://api.whatsapp.com/send?phone=${encodeURIComponent(WHATSAPP_NUMBER)}&text=${encodeURIComponent(message)}`;
     }
-
-    // Dedupe por contexto (fbp + utm + phone)
     function dedupeKey({phone, utm_source, utm_campaign, fbp}){
       return `redir:${phone}:${utm_source||'na'}:${utm_campaign||'na'}:${fbp||'na'}`;
     }
-    function setDedupe(key, ttlMs){
-      try { localStorage.setItem(key, String(Date.now() + ttlMs)); } catch {}
-    }
+    function setDedupe(key, ttlMs){ try { localStorage.setItem(key, String(Date.now() + ttlMs)); } catch {} }
     function isDedupe(key){
       try {
         const until = Number(localStorage.getItem(key) || 0);
@@ -154,13 +111,11 @@
     const fbclid = qp('fbclid');
     const fbc = fbclid ? `fb.1.${Math.floor(Date.now()/1000)}.${fbclid}` : null;
     const fbp = getCookie('_fbp');
-
     const utm_source   = (qp('utm_source')   || 'organic').toLowerCase();
     const utm_medium   = (qp('utm_medium')   || 'direct').toLowerCase();
     const utm_campaign = (qp('utm_campaign') || 'na').toLowerCase();
     const utm_content  = (qp('utm_content')  || 'na').toLowerCase();
     const utm_term     = (qp('utm_term')     || 'na').toLowerCase();
-
     const link_id = `${utm_source}_${utm_medium}_${utm_campaign}`;
 
     // ======== Estado global e token ========
@@ -171,86 +126,32 @@
       pixelLeadSent: false,
       pixelPageViewSent: false,
       webhookSentOk: false,
-      eventsSent: new Set(), // Controle de eventos únicos
-      pageLoadTime: Date.now(),
+      eventsSent: new Set(),
+      pageLoadTime: performance.now(),
       timeOnPage: 0
     };
     RedirectState.tokenHex = RedirectState.eventId.replace(/-/g,'').slice(0,8);
     const mensagemFinal = `${BASE_MESSAGE}${RedirectState.tokenHex}`;
-
-    // Chave de dedupe
     const dedupeCtxKey = dedupeKey({phone: WHATSAPP_NUMBER, utm_source, utm_campaign, fbp});
 
-    // ======== Webhook / Pixel ========
-    async function sendWebhook(payload, retryCount = 0){
-      try{
-        const res = await fetch(PREHOOK_URL, {
-          method:'POST',
-          headers:{'Content-Type':'application/json','Accept':'application/json'},
-          body: JSON.stringify(payload)
-        });
-        if(res.ok){
-          RedirectState.webhookSentOk = true;
-          console.log('✅ Webhook OK');
-          return true;
-        }
-        console.warn('⚠️ Webhook status:', res.status);
-        
-        // Retry se não excedeu o limite
-        if(retryCount < MAX_WEBHOOK_RETRIES) {
-          console.log(`🔄 Tentativa ${retryCount + 1}/${MAX_WEBHOOK_RETRIES} - aguardando ${WEBHOOK_RETRY_DELAY}ms...`);
-          await new Promise(resolve => setTimeout(resolve, WEBHOOK_RETRY_DELAY));
-          return await sendWebhook(payload, retryCount + 1);
-        }
-        
-        return false;
-      }catch(e){
-        console.error('❌ Webhook error:', e);
-        
-        // Retry se não excedeu o limite
-        if(retryCount < MAX_WEBHOOK_RETRIES) {
-          console.log(`🔄 Tentativa ${retryCount + 1}/${MAX_WEBHOOK_RETRIES} - aguardando ${WEBHOOK_RETRY_DELAY}ms...`);
-          await new Promise(resolve => setTimeout(resolve, WEBHOOK_RETRY_DELAY));
-          return await sendWebhook(payload, retryCount + 1);
-        }
-        
-        return false;
-      }
-    }
-
+    // ======== Pixel helpers (não bloqueiam redirect) ========
     function sendPixelEventOnce(eventName, payload, eventId = null) {
       const eventKey = `${eventName}_${eventId || RedirectState.eventId}`;
       if (RedirectState.eventsSent.has(eventKey)) return false;
-      if (typeof fbq === 'undefined') {
-        console.warn(`⚠️ Pixel não está pronto para enviar ${eventName}`);
-        return false;
-      }
-      
-      const eventOptions = {
-        eventID: eventId || RedirectState.eventId,
-        eventSourceUrl: location.href
-      };
-      
+      if (typeof fbq === 'undefined') return false;
       try {
-        fbq('track', eventName, payload, eventOptions);
+        fbq('track', eventName, payload, { eventID: eventId || RedirectState.eventId, eventSourceUrl: location.href });
         RedirectState.eventsSent.add(eventKey);
-        console.log(`📊 Pixel ${eventName} enviado (client).`);
         return true;
-      } catch (error) {
-        console.error(`❌ Erro ao enviar ${eventName}:`, error);
-        return false;
-      }
+      } catch { return false; }
     }
-
     function sendPixelLeadOnce(payload){
       if (RedirectState.pixelLeadSent) return;
       const sent = sendPixelEventOnce('Lead', payload);
       if (sent) RedirectState.pixelLeadSent = true;
     }
-
     function sendPixelPageViewOnce() {
       if (RedirectState.pixelPageViewSent) return;
-      
       const pageViewData = {
         content_name: 'WhatsApp Redirect Page',
         content_category: 'Lead Generation',
@@ -264,28 +165,18 @@
         viewport_size: `${window.innerWidth}x${window.innerHeight}`,
         color_depth: screen.colorDepth,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        utm_source: utm_source,
-        utm_medium: utm_medium,
-        utm_campaign: utm_campaign,
-        utm_content: utm_content,
-        utm_term: utm_term,
-        fbclid: fbclid,
-        fbc: fbc,
-        fbp: fbp,
-        link_id: link_id,
+        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+        fbclid, fbc, fbp, link_id,
         event_time: Math.floor(Date.now() / 1000),
         event_source_url: location.href
       };
-      
       const sent = sendPixelEventOnce('PageView', pageViewData);
       if (sent) RedirectState.pixelPageViewSent = true;
     }
-
     function sendTimeOnPageEvent() {
-      RedirectState.timeOnPage = Date.now() - RedirectState.pageLoadTime;
-      
+      RedirectState.timeOnPage = performance.now() - RedirectState.pageLoadTime;
       const timeData = {
-        time_on_page: RedirectState.timeOnPage,
+        time_on_page: Math.round(RedirectState.timeOnPage),
         page_title: document.title,
         page_url: location.href,
         referrer: document.referrer || null,
@@ -294,15 +185,8 @@
         screen_resolution: `${screen.width}x${screen.height}`,
         viewport_size: `${window.innerWidth}x${window.innerHeight}`,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        utm_source: utm_source,
-        utm_medium: utm_medium,
-        utm_campaign: utm_campaign,
-        utm_content: utm_content,
-        utm_term: utm_term,
-        fbclid: fbclid,
-        fbc: fbc,
-        fbp: fbp,
-        link_id: link_id,
+        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+        fbclid, fbc, fbp, link_id,
         event_time: Math.floor(Date.now() / 1000),
         event_source_url: location.href,
         custom_data: {
@@ -310,208 +194,140 @@
           token: RedirectState.tokenHex,
           phone_target: WHATSAPP_NUMBER,
           time_category: RedirectState.timeOnPage < 3000 ? 'quick_exit' : 
-                       RedirectState.timeOnPage < 10000 ? 'normal' : 'engaged'
+                         RedirectState.timeOnPage < 10000 ? 'normal' : 'engaged'
         }
       };
-      
       sendPixelEventOnce('time_on_page', timeData);
     }
 
-    // ======== Clique/touch único (sem duplicar) ========
-    window.addEventListener('pointerdown', () => {
-      if (RedirectState.redirectInProgress) return;
-      RedirectState.redirectInProgress = true;
+    // ======== Webhook (fire-and-forget dentro de um orçamento) ========
+    async function tryWebhookWithinBudget(payload, budgetMs){
+      // usa AbortController + fetch keepalive para não bloquear o redirect/unload
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort('timeout'), budgetMs);
 
-      // Envia evento de tempo na página antes do clique
-      sendTimeOnPageEvent();
-      
-      // Evento custom opcional (não é Lead) - usando sistema de controle
-      if (typeof fbq !== 'undefined') {
-        const eventKey = `wa_click_${RedirectState.eventId}`;
-        if (!RedirectState.eventsSent.has(eventKey)) {
-          const clickData = {
-            internal_event_id: RedirectState.eventId,
-            click_type: 'whatsapp_redirect',
-            click_method: 'pointerdown',
-            page_title: document.title,
-            page_url: location.href,
-            referrer: document.referrer || null,
-            user_agent: navigator.userAgent,
-            language: navigator.language || 'pt-BR',
-            screen_resolution: `${screen.width}x${screen.height}`,
-            viewport_size: `${window.innerWidth}x${window.innerHeight}`,
-            color_depth: screen.colorDepth,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-            utm_source: utm_source,
-            utm_medium: utm_medium,
-            utm_campaign: utm_campaign,
-            utm_content: utm_content,
-            utm_term: utm_term,
-            fbclid: fbclid,
-            fbc: fbc,
-            fbp: fbp,
-            link_id: link_id,
-            event_time: Math.floor(Date.now() / 1000),
-            custom_data: {
-              click_source: 'whatsapp_redirect',
-              click_medium: 'landing_page',
-              click_campaign: utm_campaign,
-              click_content: utm_content,
-              click_term: utm_term,
-              session_id: RedirectState.eventId,
-              token: RedirectState.tokenHex,
-              phone_target: WHATSAPP_NUMBER,
-              message_preview: mensagemFinal.substring(0, 50) + '...',
-              click_timestamp: Date.now(),
-              click_position: 'center_page'
-            }
-          };
-          
-          fbq('trackCustom', 'wa_click', clickData, {
-            eventID: RedirectState.eventId,
-            eventSourceUrl: location.href
-          });
-          RedirectState.eventsSent.add(eventKey);
-          console.log('📊 Pixel wa_click enviado (client).');
-        }
-      }
-
-      window.location.replace(createWhatsAppURL(mensagemFinal));
-    }, { once:true, passive:true });
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      if (RedirectState.redirectInProgress) return;
-      RedirectState.redirectInProgress = true;
-      window.location.replace(createWhatsAppURL(mensagemFinal));
-    }, { once:true });
-
-    // ======== Fluxo principal ========
-    (async function main(){
-      console.log('🚀 Iniciando fluxo...');
-      
-      // Aguarda o pixel estar pronto antes de enviar PageView
-      const waitForPixel = () => {
-        return new Promise((resolve) => {
-          const checkPixel = () => {
-            if (typeof fbq !== 'undefined') {
-              resolve();
-            } else {
-              setTimeout(checkPixel, 50);
-            }
-          };
-          checkPixel();
-        });
-      };
-      
-      await waitForPixel();
-      
-      // Envia PageView apenas uma vez no início
-      sendPixelPageViewOnce();
-      
-      if (isDedupe(dedupeCtxKey)) {
-        console.log('🛑 Dedupe por contexto — já processado recentemente.');
-        // Mesmo com dedupe, ainda redireciona para não travar o usuário
-        console.log('🔄 Redirecionando mesmo com dedupe ativo...');
-      } else {
-        setDedupe(dedupeCtxKey, DEDUPE_TTL_MS);
-      }
-
-      const payload = {
-        event_type: 'lead_captured',
-        event_id: RedirectState.eventId,
-        short_token: RedirectState.tokenHex,
-        link_id,
-        phone_target: WHATSAPP_NUMBER,
-        url: location.href,
-        referrer: document.referrer || null,
-        user_agent: navigator.userAgent,
-        language: navigator.language || 'pt-BR',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-        fbp: fbp || null,
-        fbc: fbc || null,
-        // IP/geo: deixe para o servidor (mais confiável) — aqui ficam nulos
-        ip: null, country: null, region: null, city: null
-      };
-
-      // Tenta o webhook (CAPI) com timeout configurável
-      const abortCtl = new AbortController();
-      const webhookTimeout = Math.min(REDIRECT_DELAY - 1000, 3000); // Máximo 3s, mas respeita REDIRECT_DELAY
-      const softTimeout = setTimeout(() => abortCtl.abort(), webhookTimeout);
-
-      let webhookOk = false;
       try {
-        webhookOk = await sendWebhook(payload);
-      } catch(_) {}
-      clearTimeout(softTimeout);
+        const res = await fetch(PREHOOK_URL, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','Accept':'application/json'},
+          body: JSON.stringify(payload),
+          keepalive: true,
+          signal: controller.signal
+        });
+        clearTimeout(timer);
+        if (res.ok) return true;
+      } catch(_) {
+        clearTimeout(timer);
+      }
+      return false;
+    }
 
-      // Se o webhook falhar, manda Lead no client (1x) para não perder conversão
-      if (!webhookOk) {
-        console.log('⚠️ Webhook falhou, enviando Lead via pixel client-side');
-        sendPixelLeadOnce({
-          value: 0,
-          currency: 'BRL',
-          content_name: 'WhatsApp Lead',
-          content_category: 'Lead Generation',
-          content_type: 'lead_form',
-          lead_type: 'whatsapp_redirect',
-          page_title: document.title,
-          page_url: location.href,
+    // ======== Interações do usuário (podem antecipar redirect) ========
+    function goNow(){
+      if (RedirectState.redirectInProgress) return;
+      sendTimeOnPageEvent(); // tenta antes de sair
+      RedirectState.redirectInProgress = true;
+      window.location.replace(createWhatsAppURL(mensagemFinal));
+    }
+    window.addEventListener('pointerdown', goNow, { once:true, passive:true });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Enter') goNow(); }, { once:true });
+
+    // ======== Fluxo principal com DEADLINE DE 2s ========
+    (function main(){
+      const deadlineAt = performance.now() + REDIRECT_DEADLINE_MS;
+
+      // 1) Agenda redirect duro para 2s (independente de qualquer coisa)
+      setTimeout(() => {
+        if (!RedirectState.redirectInProgress) goNow();
+      }, REDIRECT_DEADLINE_MS);
+
+      // 2) Inicia Pixel assim que possível (não bloqueia)
+      //    Tenta a cada ~50ms até o deadline.
+      (function spinInitPixel(){
+        if (performance.now() >= deadlineAt) return;
+        initPixelOnce();
+        if (!window.pixelInitialized) setTimeout(spinInitPixel, 50);
+      })();
+
+      // 3) PageView não-bloqueante (quando fbq estiver pronto)
+      (function spinPV(){
+        if (performance.now() >= deadlineAt) return;
+        if (typeof fbq !== 'undefined') {
+          sendPixelPageViewOnce();
+        } else {
+          setTimeout(spinPV, 60);
+        }
+      })();
+
+      // 4) Dedupe de contexto (não crítico)
+      if (!isDedupe(dedupeCtxKey)) setDedupe(dedupeCtxKey, DEDUPE_TTL_MS);
+
+      // 5) Dispara webhook em background dentro do orçamento total (1.2s)
+      (async () => {
+        const payload = {
+          event_type: 'lead_captured',
+          event_id: RedirectState.eventId,
+          short_token: RedirectState.tokenHex,
+          link_id,
+          phone_target: WHATSAPP_NUMBER,
+          url: location.href,
           referrer: document.referrer || null,
           user_agent: navigator.userAgent,
           language: navigator.language || 'pt-BR',
-          screen_resolution: `${screen.width}x${screen.height}`,
-          viewport_size: `${window.innerWidth}x${window.innerHeight}`,
-          color_depth: screen.colorDepth,
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-          utm_source: utm_source,
-          utm_medium: utm_medium,
-          utm_campaign: utm_campaign,
-          utm_content: utm_content,
-          utm_term: utm_term,
-          fbclid: fbclid,
-          fbc: fbc,
-          fbp: fbp,
-          link_id: link_id,
-          event_time: Math.floor(Date.now() / 1000),
-          event_source_url: location.href,
-          custom_data: {
-            lead_source: 'whatsapp_redirect',
-            lead_medium: 'landing_page',
-            lead_campaign: utm_campaign,
-            lead_content: utm_content,
-            lead_term: utm_term,
-            session_id: RedirectState.eventId,
-            token: RedirectState.tokenHex,
-            phone_target: WHATSAPP_NUMBER,
-            message_preview: mensagemFinal.substring(0, 50) + '...'
-          }
-        });
-      } else {
-        console.log('✅ Webhook enviado com sucesso, Lead será processado via CAPI');
-      }
+          utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+          fbp: fbp || null,
+          fbc: fbc || null,
+          ip: null, country: null, region: null, city: null
+        };
 
-      // Redirect automático se o usuário ainda não clicou (com delay configurável)
-      if (!RedirectState.redirectInProgress) {
-        console.log(`⏰ Agendando redirect automático em ${REDIRECT_DELAY}ms...`);
-        setTimeout(() => {
-          if (!RedirectState.redirectInProgress) {
-            console.log('🚀 Executando redirect automático...');
-            // Envia evento de tempo na página antes do redirect automático
-            sendTimeOnPageEvent();
-            
-            RedirectState.redirectInProgress = true;
-            const whatsappURL = createWhatsAppURL(mensagemFinal);
-            console.log('➡️ Redirecionando para:', whatsappURL);
-            window.location.replace(whatsappURL);
-          } else {
-            console.log('⚠️ Redirect já em progresso, pulando...');
-          }
-        }, REDIRECT_DELAY);
-      } else {
-        console.log('⚠️ Redirect já em progresso, não agendando novo...');
-      }
+        let ok = await tryWebhookWithinBudget(payload, WEBHOOK_BUDGET_MS);
+        let tries = 1;
+        while (!ok && tries < MAX_WEBHOOK_RETRIES && (performance.now() + WEBHOOK_RETRY_DELAY) < deadlineAt) {
+          await new Promise(r => setTimeout(r, WEBHOOK_RETRY_DELAY));
+          ok = await tryWebhookWithinBudget(payload, Math.max(80, deadlineAt - performance.now() - 50));
+          tries++;
+        }
+        if (!ok) {
+          // fallback client-side (não bloqueia e pode rodar após redirect)
+          const fallback = () => sendPixelLeadOnce({
+              value: 0,
+              currency: 'BRL',
+              content_name: 'WhatsApp Lead',
+              content_category: 'Lead Generation',
+              content_type: 'lead_form',
+              lead_type: 'whatsapp_redirect',
+              page_title: document.title,
+              page_url: location.href,
+              referrer: document.referrer || null,
+              user_agent: navigator.userAgent,
+              language: navigator.language || 'pt-BR',
+              screen_resolution: `${screen.width}x${screen.height}`,
+              viewport_size: `${window.innerWidth}x${window.innerHeight}`,
+              color_depth: screen.colorDepth,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+              utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+              fbclid, fbc, fbp, link_id,
+              event_time: Math.floor(Date.now() / 1000),
+              event_source_url: location.href,
+              custom_data: {
+                lead_source: 'whatsapp_redirect',
+                lead_medium: 'landing_page',
+                lead_campaign: utm_campaign,
+                lead_content: utm_content,
+                lead_term: utm_term,
+                session_id: RedirectState.eventId,
+                token: RedirectState.tokenHex,
+                phone_target: WHATSAPP_NUMBER,
+                message_preview: mensagemFinal.substring(0, 50) + '...'
+              }
+          });
+          // tenta mandar antes do unload
+          try { fallback(); } catch {}
+          // também tenta no beforeunload (caso fbq só fique pronto bem no final)
+          window.addEventListener('beforeunload', () => { try { fallback(); } catch {} }, { once:true });
+        }
+      })();
     })();
   </script>
 </body>
